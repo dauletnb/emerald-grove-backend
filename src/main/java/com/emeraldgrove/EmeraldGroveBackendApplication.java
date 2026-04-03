@@ -7,7 +7,6 @@ import org.springframework.context.annotation.Bean;
 
 @SpringBootApplication
 public class EmeraldGroveBackendApplication {
-
     public static void main(String[] args) {
         SpringApplication.run(EmeraldGroveBackendApplication.class, args);
     }
@@ -18,5 +17,4 @@ public class EmeraldGroveBackendApplication {
         mapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         return mapper;
     }
-
 }

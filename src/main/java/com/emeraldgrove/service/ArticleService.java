@@ -1,4 +1,3 @@
-// ArticleService.java
 package com.emeraldgrove.service;
 
 import com.emeraldgrove.dto.SyncArticleRequest;

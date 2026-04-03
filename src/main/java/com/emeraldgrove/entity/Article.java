@@ -8,6 +8,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "articles", schema = "emerald_grove", uniqueConstraints = @UniqueConstraint(columnNames = "url"))
 @Getter
@@ -35,4 +38,8 @@ public class Article extends BaseEntity {
     @Column(nullable = false)
     @Builder.Default
     private Boolean isRead = false;
+
+    @OneToMany(mappedBy = "article", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ArticleNote> notes = new ArrayList<>();
 }

@@ -8,6 +8,8 @@ public record SyncArticleResponse(
     @Schema(description = "Synchronization result", example = "CREATED")
     SyncStatus status,
     @Schema(description = "Persisted article identifier", example = "42")
-    Long articleId
+    Long articleId,
+    @Schema(description = "Synchronized article snapshot")
+    SyncArticlePayloadResponse article
 ) {
 }

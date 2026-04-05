@@ -1,19 +1,22 @@
 package com.emeraldgrove.dto;
 
-import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
-@Schema(description = "Request payload for article synchronization")
+import java.util.List;
+
 public record SyncArticleRequest(
-    @Schema(description = "External system identifier", example = "ext-12345")
+    @Size(max = 36)
     String externalId,
     @NotBlank
-    @Schema(description = "Article source URL", example = "https://example.com/articles/emerald-grove")
+    @Size(max = 2048)
     String url,
     @NotBlank
-    @Schema(description = "Article title", example = "Emerald Grove launches new feature")
+    @Size(max = 255)
     String title,
-    @Schema(description = "Short article description", example = "A short summary of the article content.")
-    String description
+    @Size(max = 5000)
+    String description,
+    @Valid List<SyncArticleNoteRequest> notes
 ) {
 }

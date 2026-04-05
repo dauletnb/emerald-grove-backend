@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "articles", schema = "emerald_grove", uniqueConstraints = @UniqueConstraint(columnNames = "url"))
+@Table(name = "articles", uniqueConstraints = @UniqueConstraint(columnNames = "url"))
 @Getter
 @Setter
 @NoArgsConstructor

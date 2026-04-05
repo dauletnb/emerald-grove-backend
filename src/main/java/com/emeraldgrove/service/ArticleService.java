@@ -4,5 +4,5 @@ import com.emeraldgrove.dto.SyncArticleRequest;
 import com.emeraldgrove.dto.SyncArticleResponse;
 
 public interface ArticleService {
-    SyncArticleResponse sync(SyncArticleRequest request);
+    SyncArticleResponse syncArticle(SyncArticleRequest request);
 }

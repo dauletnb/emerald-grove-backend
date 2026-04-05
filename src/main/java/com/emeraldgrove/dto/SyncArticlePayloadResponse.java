@@ -1,0 +1,50 @@
+package com.emeraldgrove.dto;
+
+import com.emeraldgrove.entity.Article;
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Schema(description = "Synchronized article snapshot")
+public record SyncArticlePayloadResponse(
+    @Schema(description = "Persisted article identifier", example = "42")
+    Long articleId,
+    @Schema(description = "Client article identifier", example = "frontend-article-123")
+    String externalId,
+    @Schema(description = "Article URL", example = "https://example.com/article")
+    String url,
+    @Schema(description = "Article title", example = "Interesting article")
+    String title,
+    @Schema(description = "Article description", example = "Short description")
+    String description,
+    @Schema(description = "Read flag", example = "false")
+    Boolean isRead,
+    @Schema(description = "Server creation timestamp in milliseconds", example = "1712160000000")
+    Long createdAt,
+    @Schema(description = "Server update timestamp in milliseconds", example = "1712160005000")
+    Long updatedAt,
+    @Schema(description = "Synchronized notes")
+    List<SyncArticleNoteResponse> notes
+) {
+    public static SyncArticlePayloadResponse fromEntity(Article article) {
+        return new SyncArticlePayloadResponse(
+            article.getId(),
+            article.getExternalId(),
+            article.getUrl(),
+            article.getTitle(),
+            article.getDescription(),
+            article.getIsRead(),
+            toEpochMillis(article.getCreatedAt()),
+            toEpochMillis(article.getUpdatedAt()),
+            article.getNotes().stream()
+                .map(SyncArticleNoteResponse::fromEntity)
+                .toList()
+        );
+    }
+
+    private static Long toEpochMillis(LocalDateTime value) {
+        return value == null ? null : Timestamp.valueOf(value).getTime();
+    }
+}

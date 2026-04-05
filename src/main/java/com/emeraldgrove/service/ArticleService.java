@@ -8,4 +8,5 @@ import java.util.List;
 
 public interface ArticleService {
     SyncArticleResponse syncArticle(SyncArticleRequest request);
+    List<ArticleSyncDto> getAll();
 }

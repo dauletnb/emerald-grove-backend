@@ -1,5 +1,7 @@
 package com.emeraldgrove.service.impl;
 
+import com.emeraldgrove.dto.ArticleNoteDto;
+import com.emeraldgrove.dto.ArticleSyncDto;
 import com.emeraldgrove.dto.SyncArticleNoteRequest;
 import com.emeraldgrove.dto.SyncArticlePayloadResponse;
 import com.emeraldgrove.dto.SyncArticleRequest;
@@ -12,9 +14,11 @@ import com.emeraldgrove.security.XssSanitizer;
 import com.emeraldgrove.service.ArticleService;
 import com.emeraldgrove.service.ArticleSummaryService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -71,6 +75,14 @@ public class ArticleServiceImpl implements ArticleService {
             Article saved = articleRepository.save(raceExisting);
             return new SyncArticleResponse(SyncStatus.UPDATED, saved.getId(), SyncArticlePayloadResponse.fromEntity(saved));
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ArticleSyncDto> getAll() {
+        return articleRepository.findAll().stream()
+            .map(this::toDto)
+            .toList();
     }
 
     private Article findExistingArticle(SyncArticleRequest request) {
@@ -136,5 +148,34 @@ public class ArticleServiceImpl implements ArticleService {
 
     private String sanitizeText(String value) {
         return xssSanitizer.sanitize(value);
+    }
+
+    private ArticleSyncDto toDto(Article article) {
+        return new ArticleSyncDto(
+            article.getId(),
+            article.getExternalId(),
+            article.getUrl(),
+            article.getTitle(),
+            article.getDescription(),
+            article.getIsRead(),
+            toEpochMillis(article.getCreatedAt()),
+            toEpochMillis(article.getUpdatedAt()),
+            article.getNotes().stream()
+                .map(this::toDto)
+                .toList()
+        );
+    }
+
+    private ArticleNoteDto toDto(ArticleNote note) {
+        return new ArticleNoteDto(
+            note.getExternalId(),
+            note.getType(),
+            note.getContent(),
+            note.getClientCreatedAt()
+        );
+    }
+
+    private Long toEpochMillis(java.time.LocalDateTime value) {
+        return value == null ? null : Timestamp.valueOf(value).getTime();
     }
 }

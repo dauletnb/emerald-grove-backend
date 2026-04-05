@@ -1,17 +1,22 @@
 package com.emeraldgrove.controller;
 
 import com.emeraldgrove.api.ArticleSyncApi;
+import com.emeraldgrove.dto.ArticleSyncDto;
 import com.emeraldgrove.dto.SyncArticleRequest;
 import com.emeraldgrove.dto.SyncArticleResponse;
+import com.emeraldgrove.enums.SyncStatus;
 import com.emeraldgrove.service.ArticleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/articles")
@@ -28,7 +33,7 @@ public class ArticleSyncController implements ArticleSyncApi {
     }
 
     @GetMapping
-    public ResponseEntity<java.util.List<ArticleSyncDto>> getArticles() {
+    public ResponseEntity<List<ArticleSyncDto>> getArticles() {
         return ResponseEntity.status(HttpStatus.OK).body(articleService.getAll());
     }
 }

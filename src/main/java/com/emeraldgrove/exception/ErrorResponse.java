@@ -1,17 +1,21 @@
 package com.emeraldgrove.exception;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.http.HttpStatus;
 
 import java.time.Instant;
 
-// ErrorResponse.java
+@Schema(description = "Standard API error payload")
 public record ErrorResponse(
-        String code,        // машиночитаемый код: "DUPLICATE", "NOT_FOUND" и тд
-        String message,     // человекочитаемое сообщение
-        int status,         // HTTP статус код: 409, 404 и тд
-        Instant timestamp   // время ошибки — полезно при дебаггинге
+    @Schema(description = "Machine-readable error code", example = "VALIDATION_ERROR")
+    String code,
+    @Schema(description = "Human-readable error message", example = "title: must not be blank")
+    String message,
+    @Schema(description = "HTTP status code", example = "400")
+    int status,
+    @Schema(description = "Error timestamp in UTC", example = "2026-04-03T16:21:45.123Z")
+    Instant timestamp
 ) {
-    // фабричный метод чтобы не писать new ErrorResponse(...) каждый раз
     public static ErrorResponse of(String code, String message, HttpStatus status) {
         return new ErrorResponse(code, message, status.value(), Instant.now());
     }

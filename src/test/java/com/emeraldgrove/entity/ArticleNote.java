@@ -12,7 +12,6 @@ import lombok.Setter;
 @Entity
 @Table(
     name = "article_notes",
-    schema = "emerald_grove",
     uniqueConstraints = @UniqueConstraint(columnNames = "external_id")
 )
 @Getter

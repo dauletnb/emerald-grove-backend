@@ -1,117 +1,140 @@
 package com.emeraldgrove.service.impl;
 
-import com.emeraldgrove.dto.ArticleNoteDto;
-import com.emeraldgrove.dto.ArticleSyncDto;
+import com.emeraldgrove.dto.SyncArticleNoteRequest;
+import com.emeraldgrove.dto.SyncArticlePayloadResponse;
 import com.emeraldgrove.dto.SyncArticleRequest;
 import com.emeraldgrove.dto.SyncArticleResponse;
 import com.emeraldgrove.entity.Article;
 import com.emeraldgrove.entity.ArticleNote;
 import com.emeraldgrove.enums.SyncStatus;
 import com.emeraldgrove.repository.ArticleRepository;
+import com.emeraldgrove.security.XssSanitizer;
 import com.emeraldgrove.service.ArticleService;
+import com.emeraldgrove.service.ArticleSummaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class ArticleServiceImpl implements ArticleService {
-
     private final ArticleRepository articleRepository;
+    private final XssSanitizer xssSanitizer;
+    private final ArticleSummaryService articleSummaryService;
 
     @Override
     @Transactional
-    public SyncArticleResponse sync(SyncArticleRequest request) {
-        Optional<Article> byExternalId = Optional.ofNullable(request.externalId())
-                .flatMap(articleRepository::findByExternalId);
-        Optional<Article> byUrl = articleRepository.findByUrl(request.url());
+    public SyncArticleResponse syncArticle(SyncArticleRequest request) {
+        Article existing = findExistingArticle(request);
 
-        Article article = byExternalId.or(() -> byUrl).orElseGet(() -> Article.builder()
-                .notes(new ArrayList<>())
-                .build());
+        if (existing != null) {
+            updateArticle(existing, request);
+            syncNotes(existing, request.notes());
 
-        boolean isNewArticle = article.getId() == null;
+            Article saved = articleRepository.save(existing);
+            return new SyncArticleResponse(SyncStatus.UPDATED, saved.getId(), SyncArticlePayloadResponse.fromEntity(saved));
+        }
 
-        if (article.getExternalId() == null && request.externalId() != null) {
+        try {
+            String summaryDescription = articleSummaryService.summarizeDescription(
+                request.title(),
+                request.description(),
+                null
+            );
+
+            Article article = Article.builder()
+                .externalId(request.externalId())
+                .url(request.url())
+                .title(sanitizeText(request.title()))
+                .description(sanitizeText(summaryDescription))
+                .build();
+
+            syncNotes(article, request.notes());
+
+            Article saved = articleRepository.save(article);
+            return new SyncArticleResponse(SyncStatus.CREATED, saved.getId(), SyncArticlePayloadResponse.fromEntity(saved));
+        } catch (DataIntegrityViolationException e) {
+            Article raceExisting = findExistingArticle(request);
+
+            if (raceExisting == null) {
+                throw new IllegalStateException("Race condition: article not found after conflict", e);
+            }
+
+            updateArticle(raceExisting, request);
+            syncNotes(raceExisting, request.notes());
+
+            Article saved = articleRepository.save(raceExisting);
+            return new SyncArticleResponse(SyncStatus.UPDATED, saved.getId(), SyncArticlePayloadResponse.fromEntity(saved));
+        }
+    }
+
+    private Article findExistingArticle(SyncArticleRequest request) {
+        if (request.externalId() != null && !request.externalId().isBlank()) {
+            Article byExternalId = articleRepository.findByExternalId(request.externalId()).orElse(null);
+            if (byExternalId != null) {
+                return byExternalId;
+            }
+        }
+
+        return articleRepository.findByUrl(request.url()).orElse(null);
+    }
+
+    private void updateArticle(Article article, SyncArticleRequest request) {
+        if ((article.getExternalId() == null || article.getExternalId().isBlank())
+            && request.externalId() != null
+            && !request.externalId().isBlank()) {
             article.setExternalId(request.externalId());
         }
 
-        article.setUrl(request.url());
-        article.setTitle(request.title());
-        article.setDescription(request.description());
-        mergeNotes(article, request.notes());
-
-        Article saved = articleRepository.save(article);
-
-        return new SyncArticleResponse(
-                isNewArticle ? SyncStatus.CREATED : SyncStatus.UPDATED,
-                toDto(saved)
+        String summaryDescription = articleSummaryService.summarizeDescription(
+            request.title(),
+            request.description(),
+            article.getDescription()
         );
+
+        article.setTitle(sanitizeText(request.title()));
+        article.setUrl(request.url());
+        article.setDescription(sanitizeText(summaryDescription));
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<ArticleSyncDto> getAll() {
-        return articleRepository.findAll().stream()
-                .map(this::toDto)
-                .sorted(Comparator.comparing(ArticleSyncDto::updatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                .toList();
-    }
+    private void syncNotes(Article article, List<SyncArticleNoteRequest> requestNotes) {
+        List<SyncArticleNoteRequest> safeRequestNotes = requestNotes == null ? List.of() : requestNotes;
 
-    private void mergeNotes(Article article, List<ArticleNoteDto> incomingNotes) {
-        Map<String, ArticleNote> existingByExternalId = new LinkedHashMap<>();
-
+        Map<String, ArticleNote> existingByExternalId = new HashMap<>();
         for (ArticleNote note : article.getNotes()) {
             existingByExternalId.put(note.getExternalId(), note);
         }
 
-        for (ArticleNoteDto incomingNote : incomingNotes == null ? List.<ArticleNoteDto>of() : incomingNotes) {
-            ArticleNote note = existingByExternalId.get(incomingNote.id());
+        List<ArticleNote> nextNotes = new ArrayList<>();
+
+        for (SyncArticleNoteRequest requestNote : safeRequestNotes) {
+            ArticleNote note = existingByExternalId.get(requestNote.id());
 
             if (note == null) {
                 note = ArticleNote.builder()
-                        .externalId(incomingNote.id())
-                        .article(article)
-                        .build();
-                article.getNotes().add(note);
-                existingByExternalId.put(incomingNote.id(), note);
+                    .externalId(requestNote.id())
+                    .article(article)
+                    .build();
             }
 
-            note.setType(incomingNote.type());
-            note.setContent(incomingNote.content().trim());
             note.setArticle(article);
+            note.setType(requestNote.type());
+            note.setContent(sanitizeText(requestNote.content()));
+            note.setClientCreatedAt(requestNote.createdAt());
+
+            nextNotes.add(note);
         }
+
+        article.getNotes().clear();
+        article.getNotes().addAll(nextNotes);
     }
 
-    private ArticleSyncDto toDto(Article article) {
-        List<ArticleNoteDto> notes = article.getNotes().stream()
-                .sorted(Comparator.comparing(ArticleNote::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(note -> new ArticleNoteDto(
-                        note.getExternalId(),
-                        note.getType(),
-                        note.getContent(),
-                        note.getCreatedAt() == null ? null : note.getCreatedAt().toInstant(ZoneOffset.UTC).toEpochMilli()
-                ))
-                .toList();
-
-        return new ArticleSyncDto(
-                article.getId(),
-                article.getExternalId(),
-                article.getUrl(),
-                article.getTitle(),
-                article.getDescription(),
-                article.getIsRead(),
-                article.getCreatedAt() == null ? null : article.getCreatedAt().toInstant(ZoneOffset.UTC).toEpochMilli(),
-                article.getUpdatedAt() == null ? null : article.getUpdatedAt().toInstant(ZoneOffset.UTC).toEpochMilli(),
-                notes
-        );
+    private String sanitizeText(String value) {
+        return xssSanitizer.sanitize(value);
     }
 }

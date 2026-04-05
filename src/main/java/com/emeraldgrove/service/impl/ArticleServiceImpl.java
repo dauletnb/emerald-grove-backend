@@ -12,7 +12,6 @@ import com.emeraldgrove.security.XssSanitizer;
 import com.emeraldgrove.service.ArticleService;
 import com.emeraldgrove.service.ArticleSummaryService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

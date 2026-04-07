@@ -18,6 +18,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityNotFoundException;
+
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -144,6 +146,29 @@ public class ArticleServiceImpl implements ArticleService {
 
         article.getNotes().clear();
         article.getNotes().addAll(nextNotes);
+    }
+
+    @Override
+    @Transactional
+    public void deleteArticle(String externalId) {
+        Article article = articleRepository.findByExternalId(externalId)
+            .orElseThrow(() -> new EntityNotFoundException("Article not found: " + externalId));
+        articleRepository.delete(article);
+    }
+
+    @Override
+    @Transactional
+    public void deleteNote(String articleExternalId, String noteExternalId) {
+        Article article = articleRepository.findByExternalId(articleExternalId)
+            .orElseThrow(() -> new EntityNotFoundException("Article not found: " + articleExternalId));
+
+        boolean removed = article.getNotes().removeIf(note -> note.getExternalId().equals(noteExternalId));
+
+        if (!removed) {
+            throw new EntityNotFoundException("Note not found: " + noteExternalId);
+        }
+
+        articleRepository.save(article);
     }
 
     private String sanitizeText(String value) {

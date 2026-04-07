@@ -9,4 +9,6 @@ import java.util.List;
 public interface ArticleService {
     SyncArticleResponse syncArticle(SyncArticleRequest request);
     List<ArticleSyncDto> getAll();
+    void deleteNote(String articleExternalId, String noteExternalId);
+    void deleteArticle(String externalId);
 }

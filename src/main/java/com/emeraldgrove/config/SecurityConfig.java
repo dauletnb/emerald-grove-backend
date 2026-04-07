@@ -1,6 +1,7 @@
 package com.emeraldgrove.config;
 
 import com.emeraldgrove.security.JwtAuthenticationFilter;
+import com.emeraldgrove.security.RateLimitFilter;
 import java.util.Arrays;
 import java.util.List;
 import jakarta.servlet.http.HttpServletResponse;
@@ -23,7 +24,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityFilterChain filterChain(
+            HttpSecurity http,
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            RateLimitFilter rateLimitFilter
+    ) {
         try {
             http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -38,6 +43,7 @@ public class SecurityConfig {
                         response.sendError(HttpServletResponse.SC_UNAUTHORIZED))
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
             return http.build();
@@ -70,5 +76,14 @@ public class SecurityConfig {
         @Value("${emerald-grove.security.extension-token}") String extensionToken
     ) {
         return new JwtAuthenticationFilter(extensionToken);
+    }
+
+    @Bean
+    public RateLimitFilter rateLimitFilter(
+        @Value("${emerald-grove.rate-limit.sync-limit:30}") int syncLimit,
+        @Value("${emerald-grove.rate-limit.auth-check-limit:10}") int authCheckLimit,
+        @Value("${emerald-grove.rate-limit.window-seconds:60}") int windowSeconds
+    ) {
+        return new RateLimitFilter(syncLimit, authCheckLimit, windowSeconds * 1000L);
     }
 }

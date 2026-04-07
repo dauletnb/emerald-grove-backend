@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 
 @Tag(name = "Articles", description = "Article synchronization endpoints")
@@ -48,4 +49,32 @@ public interface ArticleSyncApi {
         )
     })
     ResponseEntity<SyncArticleResponse> syncArticle(@Valid @RequestBody SyncArticleRequest request);
+
+    @Operation(
+        summary = "Delete note",
+        description = "Deletes a note from an article by article externalId and note externalId."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Note deleted successfully"),
+        @ApiResponse(
+            responseCode = "404",
+            description = "Article or note not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+        )
+    })
+    ResponseEntity<Void> deleteNote(@PathVariable String externalId, @PathVariable String noteId);
+
+    @Operation(
+        summary = "Delete article",
+        description = "Deletes an article and all its notes by externalId."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Article deleted successfully"),
+        @ApiResponse(
+            responseCode = "404",
+            description = "Article not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+        )
+    })
+    ResponseEntity<Void> deleteArticle(@PathVariable String externalId);
 }

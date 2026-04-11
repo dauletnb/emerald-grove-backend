@@ -4,25 +4,32 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.Collections;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import java.io.IOException;
+import java.util.Collections;
+
 /**
- * Bearer token filter for extension requests.
- * Uses one configured shared token for the diploma version.
+ * JWT authentication filter.
+ *
+ * On every request:
+ * 1. Reads the "Authorization: Bearer <token>" header
+ * 2. Validates the JWT signature and expiry
+ * 3. Extracts the user's email from the token
+ * 4. Stores it in the Spring Security context so controllers can read it
+ *
+ * If the token is missing or invalid, the request continues without authentication.
+ * Spring Security will then reject the request if the endpoint requires auth.
  */
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    private final JwtService jwtService;
 
-    private final String configuredExtensionToken;
-
-    public JwtAuthenticationFilter(String configuredExtensionToken) {
-        this.configuredExtensionToken = configuredExtensionToken;
+    public JwtAuthenticationFilter(JwtService jwtService) {
+        this.jwtService = jwtService;
     }
-
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -40,27 +47,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String token = authHeader.substring(7).trim();
 
         try {
-            if (isValidExtensionToken(token)) {
-                UsernamePasswordAuthenticationToken authToken =
-                    new UsernamePasswordAuthenticationToken(
-                        "extension-user",
-                        null,
-                        Collections.emptyList()
-                    );
+            if (jwtService.isTokenValid(token)) {
+                String email = jwtService.extractEmail(token);
 
+                UsernamePasswordAuthenticationToken authToken =
+                    new UsernamePasswordAuthenticationToken(email, null, Collections.emptyList());
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         } catch (Exception e) {
-            logger.warn("Bearer token validation failed: " + e.getMessage());
+            logger.warn("JWT validation failed: " + e.getMessage());
         }
 
         filterChain.doFilter(request, response);
-    }
-
-    private boolean isValidExtensionToken(String token) {
-        return configuredExtensionToken != null
-            && !configuredExtensionToken.isBlank()
-            && configuredExtensionToken.equals(token);
     }
 }

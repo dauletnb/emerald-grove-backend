@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class XssSanitizer {
-
     private static final Pattern SCRIPT_BLOCK_PATTERN =
         Pattern.compile("(?is)<script[^>]*>.*?</script>");
     private static final Pattern DANGEROUS_BLOCK_PATTERN =

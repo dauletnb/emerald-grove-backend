@@ -11,21 +11,20 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
  * In-memory fixed-window rate limiting filter.
- * Limits POST /api/articles/sync and GET /api/auth/check per client IP.
+ * Limits POST /api/articles/sync and auth endpoints per client IP.
  * Returns 429 with JSON body when the limit is exceeded.
  */
 public class RateLimitFilter extends OncePerRequestFilter {
-
     private record WindowEntry(long windowStart, AtomicInteger count) {}
 
     private final ConcurrentHashMap<String, WindowEntry> windows = new ConcurrentHashMap<>();
     private final int syncLimit;
-    private final int authCheckLimit;
+    private final int authLimit;
     private final long windowMs;
 
-    public RateLimitFilter(int syncLimit, int authCheckLimit, long windowMs) {
+    public RateLimitFilter(int syncLimit, int authLimit, long windowMs) {
         this.syncLimit = syncLimit;
-        this.authCheckLimit = authCheckLimit;
+        this.authLimit = authLimit;
         this.windowMs = windowMs;
     }
 
@@ -73,8 +72,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if ("POST".equalsIgnoreCase(method) && uri.endsWith("/api/articles/sync")) {
             return syncLimit;
         }
-        if ("GET".equalsIgnoreCase(method) && uri.endsWith("/api/auth/check")) {
-            return authCheckLimit;
+        if ("POST".equalsIgnoreCase(method) && (uri.endsWith("/api/auth/login") || uri.endsWith("/api/auth/register"))) {
+            return authLimit;
         }
         return 0;
     }

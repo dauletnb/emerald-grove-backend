@@ -9,7 +9,6 @@ import lombok.Getter;
  */
 @Getter
 public enum NoteType {
-
     /**
      * Idea - creative thought or concept
      */

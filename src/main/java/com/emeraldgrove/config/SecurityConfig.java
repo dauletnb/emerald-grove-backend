@@ -1,9 +1,8 @@
 package com.emeraldgrove.config;
 
 import com.emeraldgrove.security.JwtAuthenticationFilter;
+import com.emeraldgrove.security.JwtService;
 import com.emeraldgrove.security.RateLimitFilter;
-import java.util.Arrays;
-import java.util.List;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -13,15 +12,29 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
+import java.util.List;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    /**
+     * BCrypt password encoder bean.
+     * Used by AuthServiceImpl to hash passwords on registration
+     * and verify them on login.
+     */
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
     @Bean
     public SecurityFilterChain filterChain(
@@ -34,7 +47,10 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
+                    // Public auth endpoints — no token needed
+                    .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh").permitAll()
                     .requestMatchers("/api/health").permitAll()
+                    // Everything else requires a valid JWT
                     .requestMatchers("/api/**").authenticated()
                     .anyRequest().denyAll()
                 )
@@ -72,18 +88,16 @@ public class SecurityConfig {
     }
 
     @Bean
-    public JwtAuthenticationFilter jwtAuthenticationFilter(
-        @Value("${emerald-grove.security.extension-token}") String extensionToken
-    ) {
-        return new JwtAuthenticationFilter(extensionToken);
+    public JwtAuthenticationFilter jwtAuthenticationFilter(JwtService jwtService) {
+        return new JwtAuthenticationFilter(jwtService);
     }
 
     @Bean
     public RateLimitFilter rateLimitFilter(
         @Value("${emerald-grove.rate-limit.sync-limit:30}") int syncLimit,
-        @Value("${emerald-grove.rate-limit.auth-check-limit:10}") int authCheckLimit,
+        @Value("${emerald-grove.rate-limit.auth-limit:10}") int authLimit,
         @Value("${emerald-grove.rate-limit.window-seconds:60}") int windowSeconds
     ) {
-        return new RateLimitFilter(syncLimit, authCheckLimit, windowSeconds * 1000L);
+        return new RateLimitFilter(syncLimit, authLimit, windowSeconds * 1000L);
     }
 }

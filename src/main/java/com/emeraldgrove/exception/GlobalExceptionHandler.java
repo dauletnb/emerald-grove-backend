@@ -13,6 +13,14 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+    @ExceptionHandler(AuthException.class)
+    public ResponseEntity<ErrorResponse> handleAuth(AuthException e) {
+        log.warn("Auth error ({}): {}", e.getStatus(), e.getMessage());
+        return ResponseEntity
+            .status(e.getStatus())
+            .body(ErrorResponse.of("AUTH_ERROR", e.getMessage(), e.getStatus()));
+    }
+
     @ExceptionHandler(DuplicateArticleException.class)
     public ResponseEntity<ErrorResponse> handleDuplicate(DuplicateArticleException e) {
         log.warn("Conflict: {}", e.getMessage());

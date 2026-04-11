@@ -9,7 +9,7 @@ import lombok.*;
  * Password is never stored in plain text — only its BCrypt hash.
  */
 @Entity
-@Table(name = "users", schema = "emerald_grove")
+@Table(name = "user", schema = "emerald_grove")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,7 +20,7 @@ public class User extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(nullable = false, unique = true)
     private String email;
 
     @Column(nullable = false)

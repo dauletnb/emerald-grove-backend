@@ -19,8 +19,6 @@ public record SyncArticlePayloadResponse(
     String title,
     @Schema(description = "Article description", example = "Short description")
     String description,
-    @Schema(description = "Read flag", example = "false")
-    Boolean isRead,
     @Schema(description = "Server creation timestamp in milliseconds", example = "1712160000000")
     Long createdAt,
     @Schema(description = "Server update timestamp in milliseconds", example = "1712160005000")
@@ -37,7 +35,6 @@ public record SyncArticlePayloadResponse(
             article.getUrl(),
             article.getTitle(),
             article.getDescription(),
-            article.getIsRead(),
             toEpochMillis(article.getCreatedAt()),
             toEpochMillis(article.getUpdatedAt()),
             article.getAiStatus(),

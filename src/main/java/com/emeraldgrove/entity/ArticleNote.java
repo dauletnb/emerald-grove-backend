@@ -9,9 +9,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(
-    name = "article_notes",
+    name = "article_note",
     schema = "emerald_grove",
     uniqueConstraints = @UniqueConstraint(columnNames = "external_id")
 )
@@ -36,7 +38,7 @@ public class ArticleNote extends BaseEntity {
     private String content;
 
     @Column(name = "client_created_at", nullable = false)
-    private Long clientCreatedAt;
+    private LocalDateTime clientCreatedAt;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "article_id", nullable = false)

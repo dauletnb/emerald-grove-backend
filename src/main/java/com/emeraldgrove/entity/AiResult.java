@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "ai_results", schema = "emerald_grove")
+@Table(name = "ai_result", schema = "emerald_grove")
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter

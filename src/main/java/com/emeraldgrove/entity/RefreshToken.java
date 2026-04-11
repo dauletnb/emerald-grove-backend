@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
  * Each row is one session. On refresh, the old token is revoked and a new one is created.
  */
 @Entity
-@Table(name = "refresh_tokens", schema = "emerald_grove")
+@Table(name = "refresh_token", schema = "emerald_grove")
 @Getter
 @Setter
 @NoArgsConstructor

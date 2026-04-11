@@ -22,7 +22,7 @@ public class AiOrchestrator {
 
     public void processJob(AiJob job) {
         switch (job.getType()) {
-            case "FULL_ANALYSIS" -> processFull(job);
+            case AiJob.TYPE_FULL_ANALYSIS -> processFull(job);
             default -> throw new IllegalArgumentException("Unknown job type: " + job.getType());
         }
     }
@@ -53,7 +53,7 @@ public class AiOrchestrator {
 
         aiResultRepository.save(new AiResult(
             article,
-            "FULL_ANALYSIS",
+            AiJob.TYPE_FULL_ANALYSIS,
             contentJson,
             groqService.getModel(),
             aiResponse.tokens()

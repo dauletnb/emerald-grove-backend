@@ -1,5 +1,6 @@
 package com.emeraldgrove.service.impl;
 
+import com.emeraldgrove.dto.AiResponse;
 import com.emeraldgrove.service.ArticleSummaryService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -132,6 +133,74 @@ public class GroqArticleSummaryService implements ArticleSummaryService {
         JsonNode root = objectMapper.readTree(response.body());
         JsonNode contentNode = root.path("choices").path(0).path("message").path("content");
         return normalize(contentNode.asText(""));
+    }
+
+    public AiResponse analyzeArticle(String title, String description) throws IOException, InterruptedException {
+        log.info("Groq full analysis request started: model={}, contentLength={}", groqModel, description.length());
+        AiResponse result = requestAnalysis(title, description);
+        log.info("Groq full analysis request succeeded: responseLength={}, tokens={}", result.json().length(), result.tokens());
+        return result;
+    }
+
+    public String getModel() {
+        return groqModel;
+    }
+
+    private AiResponse requestAnalysis(String title, String description) throws IOException, InterruptedException {
+        String prompt = """
+            You are an API that returns structured JSON only.
+
+            Rules:
+            - No explanations
+            - No markdown
+            - Only valid JSON
+
+            Schema:
+            {
+              "summary": {"short": "string", "detailed": "string"},
+              "keyPoints": ["string"],
+              "tags": ["string"],
+              "highlights": [{"text": "string", "explanation": "string"}],
+              "metadata": {"readingTime": 0, "complexity": "easy | medium | hard"}
+            }
+
+            Article title: %s
+            Article content:
+            %s
+            """.formatted(normalize(title), normalize(description));
+
+        String requestBody = objectMapper.writeValueAsString(Map.of(
+            "model", groqModel,
+            "temperature", 0.2,
+            "max_completion_tokens", 1024,
+            "top_p", 0.95,
+            "stream", false,
+            "reasoning_effort", "none",
+            "reasoning_format", "hidden",
+            "messages", new Object[]{
+                Map.of("role", "user", "content", prompt)
+            }
+        ));
+
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(groqApiUrl))
+            .timeout(Duration.ofMillis(groqRequestTimeoutMs))
+            .header("Authorization", "Bearer " + groqApiKey)
+            .header("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+            .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+            .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new IOException("Groq API returned status " + response.statusCode() + " with body: " + response.body());
+        }
+
+        JsonNode root = objectMapper.readTree(response.body());
+        int tokensUsed = root.path("usage").path("total_tokens").asInt(0);
+        String content = normalize(root.path("choices").path(0).path("message").path("content").asText(""));
+
+        return new AiResponse(content, tokensUsed);
     }
 
     private String normalize(String value) {

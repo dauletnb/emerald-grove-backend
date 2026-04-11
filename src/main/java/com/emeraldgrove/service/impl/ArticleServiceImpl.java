@@ -1,18 +1,23 @@
 package com.emeraldgrove.service.impl;
 
+import com.emeraldgrove.dto.ArticleAiResponse;
 import com.emeraldgrove.dto.ArticleNoteDto;
 import com.emeraldgrove.dto.ArticleSyncDto;
 import com.emeraldgrove.dto.SyncArticleNoteRequest;
 import com.emeraldgrove.dto.SyncArticlePayloadResponse;
 import com.emeraldgrove.dto.SyncArticleRequest;
 import com.emeraldgrove.dto.SyncArticleResponse;
+import com.emeraldgrove.entity.AiJob;
+import com.emeraldgrove.entity.AiResult;
 import com.emeraldgrove.entity.Article;
 import com.emeraldgrove.entity.ArticleNote;
+import com.emeraldgrove.entity.User;
 import com.emeraldgrove.enums.SyncStatus;
+import com.emeraldgrove.repository.AiJobRepository;
+import com.emeraldgrove.repository.AiResultRepository;
 import com.emeraldgrove.repository.ArticleRepository;
 import com.emeraldgrove.security.XssSanitizer;
 import com.emeraldgrove.service.ArticleService;
-import com.emeraldgrove.service.ArticleSummaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -29,43 +34,43 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class ArticleServiceImpl implements ArticleService {
+
     private final ArticleRepository articleRepository;
+    private final AiJobRepository aiJobRepository;
+    private final AiResultRepository aiResultRepository;
     private final XssSanitizer xssSanitizer;
-    private final ArticleSummaryService articleSummaryService;
 
     @Override
     @Transactional
-    public SyncArticleResponse syncArticle(SyncArticleRequest request) {
-        Article existing = findExistingArticle(request);
+    public SyncArticleResponse syncArticle(SyncArticleRequest request, User user) {
+        Article existing = findExistingArticle(request, user.getId());
 
         if (existing != null) {
             updateArticle(existing, request);
             syncNotes(existing, request.notes());
 
             Article saved = articleRepository.save(existing);
+            createJobIfAbsent(saved, "FULL_ANALYSIS");
             return new SyncArticleResponse(SyncStatus.UPDATED, saved.getId(), SyncArticlePayloadResponse.fromEntity(saved));
         }
 
         try {
-            String summaryDescription = articleSummaryService.summarizeDescription(
-                request.title(),
-                request.description(),
-                null
-            );
-
             Article article = Article.builder()
+                .user(user)
                 .externalId(request.externalId())
                 .url(request.url())
                 .title(sanitizeText(request.title()))
-                .description(sanitizeText(summaryDescription))
+                .description(sanitizeText(request.description()))
                 .build();
 
             syncNotes(article, request.notes());
 
             Article saved = articleRepository.save(article);
+            createJobIfAbsent(saved, "FULL_ANALYSIS");
             return new SyncArticleResponse(SyncStatus.CREATED, saved.getId(), SyncArticlePayloadResponse.fromEntity(saved));
         } catch (DataIntegrityViolationException e) {
-            Article raceExisting = findExistingArticle(request);
+            // Race condition: another request from the same user created the same article
+            Article raceExisting = findExistingArticle(request, user.getId());
 
             if (raceExisting == null) {
                 throw new IllegalStateException("Race condition: article not found after conflict", e);
@@ -75,27 +80,65 @@ public class ArticleServiceImpl implements ArticleService {
             syncNotes(raceExisting, request.notes());
 
             Article saved = articleRepository.save(raceExisting);
+            createJobIfAbsent(saved, "FULL_ANALYSIS");
             return new SyncArticleResponse(SyncStatus.UPDATED, saved.getId(), SyncArticlePayloadResponse.fromEntity(saved));
         }
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<ArticleSyncDto> getAll() {
-        return articleRepository.findAll().stream()
+    public List<ArticleSyncDto> getAll(Long userId) {
+        return articleRepository.findAllByUserId(userId).stream()
             .map(this::toDto)
             .toList();
     }
 
-    private Article findExistingArticle(SyncArticleRequest request) {
+    @Override
+    @Transactional
+    public void deleteArticle(String externalId, Long userId) {
+        Article article = articleRepository.findByExternalIdAndUserId(externalId, userId)
+            .orElseThrow(() -> new EntityNotFoundException("Article not found: " + externalId));
+        articleRepository.delete(article);
+    }
+
+    @Override
+    @Transactional
+    public void deleteNote(String articleExternalId, String noteExternalId, Long userId) {
+        Article article = articleRepository.findByExternalIdAndUserId(articleExternalId, userId)
+            .orElseThrow(() -> new EntityNotFoundException("Article not found: " + articleExternalId));
+
+        boolean removed = article.getNotes().removeIf(note -> note.getExternalId().equals(noteExternalId));
+
+        if (!removed) {
+            throw new EntityNotFoundException("Note not found: " + noteExternalId);
+        }
+
+        articleRepository.save(article);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ArticleAiResponse getAiResult(String externalId, Long userId) {
+        Article article = articleRepository.findByExternalIdAndUserId(externalId, userId)
+            .orElseThrow(() -> new EntityNotFoundException("Article not found: " + externalId));
+
+        String aiStatus = article.getAiStatus();
+        AiResult aiResult = aiResultRepository
+            .findTopByArticleIdAndTypeOrderByCreatedAtDesc(article.getId(), "FULL_ANALYSIS")
+            .orElse(null);
+
+        String content = aiResult != null ? aiResult.getContent() : null;
+        return new ArticleAiResponse(aiStatus, content);
+    }
+
+    private Article findExistingArticle(SyncArticleRequest request, Long userId) {
         if (request.externalId() != null && !request.externalId().isBlank()) {
-            Article byExternalId = articleRepository.findByExternalId(request.externalId()).orElse(null);
+            Article byExternalId = articleRepository.findByExternalIdAndUserId(request.externalId(), userId).orElse(null);
             if (byExternalId != null) {
                 return byExternalId;
             }
         }
-
-        return articleRepository.findByUrl(request.url()).orElse(null);
+        return articleRepository.findByUrlAndUserId(request.url(), userId).orElse(null);
     }
 
     private void updateArticle(Article article, SyncArticleRequest request) {
@@ -105,15 +148,9 @@ public class ArticleServiceImpl implements ArticleService {
             article.setExternalId(request.externalId());
         }
 
-        String summaryDescription = articleSummaryService.summarizeDescription(
-            request.title(),
-            request.description(),
-            article.getDescription()
-        );
-
         article.setTitle(sanitizeText(request.title()));
         article.setUrl(request.url());
-        article.setDescription(sanitizeText(summaryDescription));
+        article.setDescription(sanitizeText(request.description()));
     }
 
     private void syncNotes(Article article, List<SyncArticleNoteRequest> requestNotes) {
@@ -148,27 +185,11 @@ public class ArticleServiceImpl implements ArticleService {
         article.getNotes().addAll(nextNotes);
     }
 
-    @Override
-    @Transactional
-    public void deleteArticle(String externalId) {
-        Article article = articleRepository.findByExternalId(externalId)
-            .orElseThrow(() -> new EntityNotFoundException("Article not found: " + externalId));
-        articleRepository.delete(article);
-    }
-
-    @Override
-    @Transactional
-    public void deleteNote(String articleExternalId, String noteExternalId) {
-        Article article = articleRepository.findByExternalId(articleExternalId)
-            .orElseThrow(() -> new EntityNotFoundException("Article not found: " + articleExternalId));
-
-        boolean removed = article.getNotes().removeIf(note -> note.getExternalId().equals(noteExternalId));
-
-        if (!removed) {
-            throw new EntityNotFoundException("Note not found: " + noteExternalId);
+    private void createJobIfAbsent(Article article, String type) {
+        if (!aiJobRepository.existsByArticleIdAndType(article.getId(), type)) {
+            article.setAiStatus("PENDING");
+            aiJobRepository.save(AiJob.create(article, type));
         }
-
-        articleRepository.save(article);
     }
 
     private String sanitizeText(String value) {
@@ -185,6 +206,7 @@ public class ArticleServiceImpl implements ArticleService {
             article.getIsRead(),
             toEpochMillis(article.getCreatedAt()),
             toEpochMillis(article.getUpdatedAt()),
+            article.getAiStatus(),
             article.getNotes().stream()
                 .map(this::toDto)
                 .toList()

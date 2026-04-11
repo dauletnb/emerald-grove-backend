@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 @Tag(name = "Articles", description = "Article synchronization endpoints")
 public interface ArticleSyncApi {
-
     @Operation(
         summary = "Synchronize article",
         description = "Creates or updates an article and returns the persisted server snapshot."
@@ -52,7 +51,7 @@ public interface ArticleSyncApi {
 
     @Operation(
         summary = "Delete note",
-        description = "Deletes a note from an article by article externalId and note externalId."
+        description = "Deletes a note from an article by the article externalId and noteId."
     )
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Note deleted successfully"),
@@ -62,11 +61,14 @@ public interface ArticleSyncApi {
             content = @Content(schema = @Schema(implementation = ErrorResponse.class))
         )
     })
-    ResponseEntity<Void> deleteNote(@PathVariable String externalId, @PathVariable String noteId);
+    ResponseEntity<Void> deleteNote(
+        @PathVariable String externalId,
+        @PathVariable String noteId
+    );
 
     @Operation(
         summary = "Delete article",
-        description = "Deletes an article and all its notes by externalId."
+        description = "Deletes an article and all of its notes by externalId."
     )
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Article deleted successfully"),

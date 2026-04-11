@@ -25,6 +25,8 @@ public record SyncArticlePayloadResponse(
     Long createdAt,
     @Schema(description = "Server update timestamp in milliseconds", example = "1712160005000")
     Long updatedAt,
+    @Schema(description = "AI processing status", example = "PENDING")
+    String aiStatus,
     @Schema(description = "Synchronized notes")
     List<SyncArticleNoteResponse> notes
 ) {
@@ -38,6 +40,7 @@ public record SyncArticlePayloadResponse(
             article.getIsRead(),
             toEpochMillis(article.getCreatedAt()),
             toEpochMillis(article.getUpdatedAt()),
+            article.getAiStatus(),
             article.getNotes().stream()
                 .map(SyncArticleNoteResponse::fromEntity)
                 .toList()

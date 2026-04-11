@@ -2,30 +2,29 @@ package com.emeraldgrove.entity;
 
 import com.emeraldgrove.entity.baseEntity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "articles", schema = "emerald_grove", uniqueConstraints = @UniqueConstraint(columnNames = "url"))
+@Table(name = "articles", schema = "emerald_grove")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class
-Article extends BaseEntity {
+public class Article extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(unique = true, length = 36)
-    private String externalId; // optional, для idempotency с фронта
+    private String externalId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @Column(nullable = false)
     private String title;
@@ -39,6 +38,9 @@ Article extends BaseEntity {
     @Column(nullable = false)
     @Builder.Default
     private Boolean isRead = false;
+
+    @Column(name = "ai_status", length = 20)
+    private String aiStatus;
 
     @OneToMany(mappedBy = "article", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

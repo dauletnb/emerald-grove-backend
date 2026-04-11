@@ -26,6 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityNotFoundException;
 
 import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -50,7 +53,7 @@ public class ArticleServiceImpl implements ArticleService {
             syncNotes(existing, request.notes());
 
             Article saved = articleRepository.save(existing);
-            createJobIfAbsent(saved, "FULL_ANALYSIS");
+            createFullAnalysisJobIfAbsent(saved);
             return new SyncArticleResponse(SyncStatus.UPDATED, saved.getId(), SyncArticlePayloadResponse.fromEntity(saved));
         }
 
@@ -66,7 +69,7 @@ public class ArticleServiceImpl implements ArticleService {
             syncNotes(article, request.notes());
 
             Article saved = articleRepository.save(article);
-            createJobIfAbsent(saved, "FULL_ANALYSIS");
+            createFullAnalysisJobIfAbsent(saved);
             return new SyncArticleResponse(SyncStatus.CREATED, saved.getId(), SyncArticlePayloadResponse.fromEntity(saved));
         } catch (DataIntegrityViolationException e) {
             // Race condition: another request from the same user created the same article
@@ -80,7 +83,7 @@ public class ArticleServiceImpl implements ArticleService {
             syncNotes(raceExisting, request.notes());
 
             Article saved = articleRepository.save(raceExisting);
-            createJobIfAbsent(saved, "FULL_ANALYSIS");
+            createFullAnalysisJobIfAbsent(saved);
             return new SyncArticleResponse(SyncStatus.UPDATED, saved.getId(), SyncArticlePayloadResponse.fromEntity(saved));
         }
     }
@@ -124,7 +127,7 @@ public class ArticleServiceImpl implements ArticleService {
 
         String aiStatus = article.getAiStatus();
         AiResult aiResult = aiResultRepository
-            .findTopByArticleIdAndTypeOrderByCreatedAtDesc(article.getId(), "FULL_ANALYSIS")
+            .findTopByArticleIdAndTypeOrderByCreatedAtDesc(article.getId(), AiJob.TYPE_FULL_ANALYSIS)
             .orElse(null);
 
         String content = aiResult != null ? aiResult.getContent() : null;
@@ -176,7 +179,7 @@ public class ArticleServiceImpl implements ArticleService {
             note.setArticle(article);
             note.setType(requestNote.type());
             note.setContent(sanitizeText(requestNote.content()));
-            note.setClientCreatedAt(requestNote.createdAt());
+            note.setClientCreatedAt(toLocalDateTime(requestNote.createdAt()));
 
             nextNotes.add(note);
         }
@@ -185,10 +188,10 @@ public class ArticleServiceImpl implements ArticleService {
         article.getNotes().addAll(nextNotes);
     }
 
-    private void createJobIfAbsent(Article article, String type) {
-        if (!aiJobRepository.existsByArticleIdAndType(article.getId(), type)) {
+    private void createFullAnalysisJobIfAbsent(Article article) {
+        if (!aiJobRepository.existsByArticleIdAndType(article.getId(), AiJob.TYPE_FULL_ANALYSIS)) {
             article.setAiStatus("PENDING");
-            aiJobRepository.save(AiJob.create(article, type));
+            aiJobRepository.save(AiJob.createFullAnalysisJob(article));
         }
     }
 
@@ -203,7 +206,6 @@ public class ArticleServiceImpl implements ArticleService {
             article.getUrl(),
             article.getTitle(),
             article.getDescription(),
-            article.getIsRead(),
             toEpochMillis(article.getCreatedAt()),
             toEpochMillis(article.getUpdatedAt()),
             article.getAiStatus(),
@@ -218,11 +220,15 @@ public class ArticleServiceImpl implements ArticleService {
             note.getExternalId(),
             note.getType(),
             note.getContent(),
-            note.getClientCreatedAt()
+            toEpochMillis(note.getClientCreatedAt())
         );
     }
 
     private Long toEpochMillis(java.time.LocalDateTime value) {
         return value == null ? null : Timestamp.valueOf(value).getTime();
+    }
+
+    private LocalDateTime toLocalDateTime(Long epochMillis) {
+        return epochMillis == null ? null : LocalDateTime.ofInstant(Instant.ofEpochMilli(epochMillis), ZoneOffset.UTC);
     }
 }

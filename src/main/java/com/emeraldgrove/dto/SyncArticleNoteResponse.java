@@ -4,6 +4,8 @@ import com.emeraldgrove.entity.ArticleNote;
 import com.emeraldgrove.enums.NoteType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.sql.Timestamp;
+
 @Schema(description = "Synchronized article note snapshot")
 public record SyncArticleNoteResponse(
     @Schema(description = "Client note identifier", example = "note-1")
@@ -20,7 +22,11 @@ public record SyncArticleNoteResponse(
             note.getExternalId(),
             note.getType(),
             note.getContent(),
-            note.getClientCreatedAt()
+            toEpochMillis(note.getClientCreatedAt())
         );
+    }
+
+    private static Long toEpochMillis(java.time.LocalDateTime value) {
+        return value == null ? null : Timestamp.valueOf(value).getTime();
     }
 }

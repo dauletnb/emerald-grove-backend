@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "articles", schema = "emerald_grove")
+@Table(name = "article", schema = "emerald_grove")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -34,10 +34,6 @@ public class Article extends BaseEntity {
 
     @Column(columnDefinition = "TEXT")
     private String description;
-
-    @Column(nullable = false)
-    @Builder.Default
-    private Boolean isRead = false;
 
     @Column(name = "ai_status", length = 20)
     private String aiStatus;

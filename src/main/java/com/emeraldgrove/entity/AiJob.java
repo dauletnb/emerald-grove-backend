@@ -9,11 +9,13 @@ import lombok.Setter;
 import java.util.UUID;
 
 @Entity
-@Table(name = "ai_jobs", schema = "emerald_grove")
+@Table(name = "ai_job", schema = "emerald_grove")
 @Getter
 @Setter
 @NoArgsConstructor
 public class AiJob extends BaseEntity {
+    public static final String TYPE_FULL_ANALYSIS = "FULL_ANALYSIS";
+
     @Id
     private UUID id;
 
@@ -38,5 +40,9 @@ public class AiJob extends BaseEntity {
         job.setStatus("PENDING");
         job.setRetries(0);
         return job;
+    }
+
+    public static AiJob createFullAnalysisJob(Article article) {
+        return create(article, TYPE_FULL_ANALYSIS);
     }
 }

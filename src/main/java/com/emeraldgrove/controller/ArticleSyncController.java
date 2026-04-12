@@ -53,6 +53,13 @@ public class ArticleSyncController implements ArticleSyncApi {
         return ResponseEntity.ok(articleService.getAiResult(externalId, user.getId()));
     }
 
+    @PostMapping("/{externalId}/ai/retry")
+    public ResponseEntity<Void> retryAiAnalysis(@PathVariable String externalId) {
+        User user = currentUserResolver.getCurrentUser();
+        articleService.retryAiAnalysis(externalId, user.getId());
+        return ResponseEntity.accepted().build();
+    }
+
     @DeleteMapping("/{externalId}/notes/{noteId}")
     @Override
     public ResponseEntity<Void> deleteNote(

@@ -14,4 +14,5 @@ public interface ArticleService {
     void deleteNote(String articleExternalId, String noteExternalId, Long userId);
     void deleteArticle(String externalId, Long userId);
     ArticleAiResponse getAiResult(String externalId, Long userId);
+    void retryAiAnalysis(String externalId, Long userId);
 }

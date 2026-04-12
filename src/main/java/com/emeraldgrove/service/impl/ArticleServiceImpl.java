@@ -134,6 +134,15 @@ public class ArticleServiceImpl implements ArticleService {
         return new ArticleAiResponse(aiStatus, content);
     }
 
+    @Override
+    @Transactional
+    public void retryAiAnalysis(String externalId, Long userId) {
+        Article article = articleRepository.findByExternalIdAndUserId(externalId, userId)
+            .orElseThrow(() -> new EntityNotFoundException("Article not found: " + externalId));
+
+        ensureFullAnalysisQueued(article);
+    }
+
     private Article findExistingArticle(SyncArticleRequest request, Long userId) {
         if (request.externalId() != null && !request.externalId().isBlank()) {
             Article byExternalId = articleRepository.findByExternalIdAndUserId(request.externalId(), userId).orElse(null);
@@ -189,10 +198,28 @@ public class ArticleServiceImpl implements ArticleService {
     }
 
     private void createFullAnalysisJobIfAbsent(Article article) {
-        if (!aiJobRepository.existsByArticleIdAndType(article.getId(), AiJob.TYPE_FULL_ANALYSIS)) {
+        ensureFullAnalysisQueued(article);
+    }
+
+    private void ensureFullAnalysisQueued(Article article) {
+        AiJob latestJob = aiJobRepository
+            .findTopByArticleIdAndTypeOrderByCreatedAtDesc(article.getId(), AiJob.TYPE_FULL_ANALYSIS)
+            .orElse(null);
+
+        if (latestJob == null) {
             article.setAiStatus("PENDING");
             aiJobRepository.save(AiJob.createFullAnalysisJob(article));
+            return;
         }
+
+        if ("DONE".equals(latestJob.getStatus()) || "PENDING".equals(latestJob.getStatus()) || "PROCESSING".equals(latestJob.getStatus())) {
+            return;
+        }
+
+        latestJob.setStatus("PENDING");
+        latestJob.setRetries(0);
+        article.setAiStatus("PENDING");
+        aiJobRepository.save(latestJob);
     }
 
     private String sanitizeText(String value) {

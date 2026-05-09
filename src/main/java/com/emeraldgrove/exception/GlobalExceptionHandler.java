@@ -4,6 +4,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -19,14 +20,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity
             .status(e.getStatus())
             .body(ErrorResponse.of("AUTH_ERROR", e.getMessage(), e.getStatus()));
-    }
-
-    @ExceptionHandler(DuplicateArticleException.class)
-    public ResponseEntity<ErrorResponse> handleDuplicate(DuplicateArticleException e) {
-        log.warn("Conflict: {}", e.getMessage());
-        return ResponseEntity
-            .status(HttpStatus.CONFLICT)
-            .body(ErrorResponse.of("DUPLICATE", e.getMessage(), HttpStatus.CONFLICT));
     }
 
     @ExceptionHandler(EntityNotFoundException.class)
@@ -49,6 +42,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
             .body(ErrorResponse.of("VALIDATION_ERROR", message, HttpStatus.BAD_REQUEST));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadable(HttpMessageNotReadableException e) {
+        log.warn("Invalid JSON: {}", e.getMessage());
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse.of("INVALID_JSON", "Invalid JSON format", HttpStatus.BAD_REQUEST));
     }
 
     @ExceptionHandler(Exception.class)

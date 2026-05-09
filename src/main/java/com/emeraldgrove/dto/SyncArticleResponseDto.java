@@ -4,12 +4,12 @@ import com.emeraldgrove.enums.SyncStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Result of article synchronization")
-public record SyncArticleResponse(
+public record SyncArticleResponseDto(
     @Schema(description = "Synchronization result", example = "CREATED")
     SyncStatus status,
     @Schema(description = "Persisted article identifier", example = "42")
     Long articleId,
     @Schema(description = "Synchronized article snapshot")
-    SyncArticlePayloadResponse article
+    SyncArticlePayloadResponseDto article
 ) {
 }

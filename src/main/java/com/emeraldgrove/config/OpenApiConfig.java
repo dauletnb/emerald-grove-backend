@@ -14,7 +14,7 @@ public class OpenApiConfig {
         return new OpenAPI()
             .info(new Info()
                 .title("Emerald Grove API")
-                .description("REST API documentation for Emerald Grove backend.")
+                .description("REST API документация для Emerald Grove.")
                 .version("v1")
                 .contact(new Contact().name("Emerald Grove Team"))
                 .license(new License().name("Internal use")));

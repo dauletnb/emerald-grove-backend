@@ -1,6 +1,6 @@
 package com.emeraldgrove.service.impl;
 
-import com.emeraldgrove.dto.AiResponse;
+import com.emeraldgrove.dto.AiResponseDto;
 import com.emeraldgrove.dto.AiResultDto;
 import com.emeraldgrove.entity.AiJob;
 import com.emeraldgrove.entity.AiResult;
@@ -35,14 +35,14 @@ public class AiOrchestrator {
             content = content.substring(0, 8000);
         }
 
-        AiResponse aiResponse;
+        AiResponseDto aiResponseDto;
         try {
-            aiResponse = groqService.analyzeArticle(article.getTitle(), content);
+            aiResponseDto = groqService.analyzeArticle(article.getTitle(), content);
         } catch (Exception e) {
             throw new RuntimeException("Groq analysis failed: " + e.getMessage(), e);
         }
 
-        AiResultDto result = validate(aiResponse.json());
+        AiResultDto result = validate(aiResponseDto.json());
 
         String contentJson;
         try {
@@ -56,10 +56,10 @@ public class AiOrchestrator {
             AiJob.TYPE_FULL_ANALYSIS,
             contentJson,
             groqService.getModel(),
-            aiResponse.tokens()
+            aiResponseDto.tokens()
         ));
 
-        log.info("AI result saved for article {}, tokensUsed={}", article.getId(), aiResponse.tokens());
+        log.info("AI result saved for article {}, tokensUsed={}", article.getId(), aiResponseDto.tokens());
     }
 
     private AiResultDto validate(String json) {

@@ -1,8 +1,8 @@
 package com.emeraldgrove.service.impl;
 
-import com.emeraldgrove.dto.AuthResponse;
-import com.emeraldgrove.dto.LoginRequest;
-import com.emeraldgrove.dto.RegisterRequest;
+import com.emeraldgrove.dto.AuthResponseDto;
+import com.emeraldgrove.dto.LoginRequestDto;
+import com.emeraldgrove.dto.RegisterRequestDto;
 import com.emeraldgrove.entity.RefreshToken;
 import com.emeraldgrove.entity.User;
 import com.emeraldgrove.exception.AuthException;
@@ -34,7 +34,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
+    public AuthResponseDto register(RegisterRequestDto request) {
         String email = request.email().toLowerCase().trim();
 
         if (userRepository.existsByEmail(email)) {
@@ -57,7 +57,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public AuthResponse login(LoginRequest request) {
+    public AuthResponseDto login(LoginRequestDto request) {
         String email = request.email().toLowerCase().trim();
 
         User user = userRepository.findByEmail(email)
@@ -72,7 +72,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public AuthResponse refresh(String refreshToken) {
+    public AuthResponseDto refresh(String refreshToken) {
         RefreshToken stored = refreshTokenRepository.findByToken(refreshToken)
             .orElseThrow(() -> new AuthException("Invalid refresh token.", HttpStatus.UNAUTHORIZED));
 
@@ -107,7 +107,7 @@ public class AuthServiceImpl implements AuthService {
             .orElseThrow(() -> new AuthException("User not found.", HttpStatus.UNAUTHORIZED));
     }
 
-    private AuthResponse buildAuthResponse(User user) {
+    private AuthResponseDto buildAuthResponse(User user) {
         String accessToken = jwtService.generateAccessToken(user.getEmail());
         String refreshTokenValue = UUID.randomUUID().toString();
 
@@ -119,10 +119,10 @@ public class AuthServiceImpl implements AuthService {
 
         refreshTokenRepository.save(refreshToken);
 
-        return new AuthResponse(
+        return new AuthResponseDto(
             accessToken,
             refreshTokenValue,
-            new AuthResponse.UserInfo(user.getId(), user.getEmail(), user.getDisplayName())
+            new AuthResponseDto.UserInfo(user.getId(), user.getEmail(), user.getDisplayName())
         );
     }
 

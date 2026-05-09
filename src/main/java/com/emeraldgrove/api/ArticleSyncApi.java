@@ -1,7 +1,7 @@
 package com.emeraldgrove.api;
 
-import com.emeraldgrove.dto.SyncArticleRequest;
-import com.emeraldgrove.dto.SyncArticleResponse;
+import com.emeraldgrove.dto.SyncArticleRequestDto;
+import com.emeraldgrove.dto.SyncArticleResponseDto;
 import com.emeraldgrove.exception.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@Tag(name = "Articles", description = "Article synchronization endpoints")
+@Tag(name = "Articles", description = "API для управления синхронизацией статей, закладками и аналитикой на основе ИИ")
 public interface ArticleSyncApi {
     @Operation(
         summary = "Synchronize article",
@@ -24,12 +24,12 @@ public interface ArticleSyncApi {
         @ApiResponse(
             responseCode = "201",
             description = "Article created successfully",
-            content = @Content(schema = @Schema(implementation = SyncArticleResponse.class))
+            content = @Content(schema = @Schema(implementation = SyncArticleResponseDto.class))
         ),
         @ApiResponse(
             responseCode = "200",
             description = "Article updated successfully",
-            content = @Content(schema = @Schema(implementation = SyncArticleResponse.class))
+            content = @Content(schema = @Schema(implementation = SyncArticleResponseDto.class))
         ),
         @ApiResponse(
             responseCode = "400",
@@ -47,7 +47,7 @@ public interface ArticleSyncApi {
             content = @Content(schema = @Schema(implementation = ErrorResponse.class))
         )
     })
-    ResponseEntity<SyncArticleResponse> syncArticle(@Valid @RequestBody SyncArticleRequest request);
+    ResponseEntity<SyncArticleResponseDto> syncArticle(@Valid @RequestBody SyncArticleRequestDto request);
 
     @Operation(
         summary = "Delete note",

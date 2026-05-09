@@ -6,9 +6,7 @@ import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
-import java.util.List;
-
-public record SyncArticleRequest(
+public record SyncArticleRequestDto(
     @Size(max = 36)
     String externalId,
     @NotBlank
@@ -19,6 +17,6 @@ public record SyncArticleRequest(
     String title,
     @Size(max = 5000)
     String description,
-    @Valid List<SyncArticleNoteRequest> notes
+    @Valid List<SyncArticleNoteRequestDto> notes
 ) {
 }

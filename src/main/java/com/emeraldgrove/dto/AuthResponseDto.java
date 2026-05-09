@@ -4,7 +4,7 @@ package com.emeraldgrove.dto;
  * Returned after successful login, registration, or token refresh.
  * The frontend stores accessToken and refreshToken in extension storage.
  */
-public record AuthResponse(
+public record AuthResponseDto(
     String accessToken,
     String refreshToken,
     UserInfo user

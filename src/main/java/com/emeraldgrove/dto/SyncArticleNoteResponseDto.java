@@ -7,7 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.sql.Timestamp;
 
 @Schema(description = "Synchronized article note snapshot")
-public record SyncArticleNoteResponse(
+public record SyncArticleNoteResponseDto(
     @Schema(description = "Client note identifier", example = "note-1")
     String id,
     @Schema(description = "Note type", example = "IDEA")
@@ -17,8 +17,8 @@ public record SyncArticleNoteResponse(
     @Schema(description = "Client note creation timestamp in milliseconds", example = "1712160000000")
     Long createdAt
 ) {
-    public static SyncArticleNoteResponse fromEntity(ArticleNote note) {
-        return new SyncArticleNoteResponse(
+    public static SyncArticleNoteResponseDto fromEntity(ArticleNote note) {
+        return new SyncArticleNoteResponseDto(
             note.getExternalId(),
             note.getType(),
             note.getContent(),

@@ -1,12 +1,14 @@
 package com.emeraldgrove.controller;
 
-import com.emeraldgrove.dto.AuthResponse;
-import com.emeraldgrove.dto.LoginRequest;
-import com.emeraldgrove.dto.RefreshTokenRequest;
-import com.emeraldgrove.dto.RegisterRequest;
+import com.emeraldgrove.dto.AuthResponseDto;
+import com.emeraldgrove.dto.LoginRequestDto;
+import com.emeraldgrove.dto.RefreshTokenRequestDto;
+import com.emeraldgrove.dto.RegisterRequestDto;
 import com.emeraldgrove.dto.UserDto;
 import com.emeraldgrove.entity.User;
 import com.emeraldgrove.service.AuthService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,38 +19,36 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Tag(name = "Auth", description = "API для управления аутентификацией")
 public class AuthController {
     private final AuthService authService;
 
-    /** Register a new user. Returns tokens immediately so the user is logged in. */
+    @Operation(summary = "Регистрация пользователя. Возвращает токены доступа и обновления")
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<AuthResponseDto> register(@Valid @RequestBody RegisterRequestDto request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
     }
 
-    /** Login with email and password. Returns access + refresh tokens. */
+    @Operation(summary = "Вход пользователя. Возвращает access + refresh токен")
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<AuthResponseDto> login(@Valid @RequestBody LoginRequestDto request) {
         return ResponseEntity.ok(authService.login(request));
     }
 
-    /**
-     * Exchange a refresh token for a new pair of tokens.
-     * The old refresh token is revoked — this is called "token rotation".
-     */
+    @Operation(summary = "Обмен refresh токена на новую пару токенов")
     @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<AuthResponseDto> refresh(@Valid @RequestBody RefreshTokenRequestDto request) {
         return ResponseEntity.ok(authService.refresh(request.refreshToken()));
     }
 
-    /** Logout: revoke the refresh token so it can no longer be used to get new access tokens. */
+    @Operation(summary = "Выход из системы")
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequestDto request) {
         authService.logout(request.refreshToken());
         return ResponseEntity.noContent().build();
     }
 
-    /** Returns the current user's profile. Requires a valid access token. */
+    @Operation(summary = "Получить профиль текущего пользователя")
     @GetMapping("/me")
     public ResponseEntity<UserDto> me(Authentication authentication) {
         User user = authService.getCurrentUser(authentication.getName());

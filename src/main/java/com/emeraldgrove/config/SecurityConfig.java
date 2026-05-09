@@ -50,6 +50,7 @@ public class SecurityConfig {
                     // Public auth endpoints — no token needed
                     .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh").permitAll()
                     .requestMatchers("/api/health").permitAll()
+                    .requestMatchers("/swagger-ui.html", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
                     // Everything else requires a valid JWT
                     .requestMatchers("/api/**").authenticated()
                     .anyRequest().denyAll()

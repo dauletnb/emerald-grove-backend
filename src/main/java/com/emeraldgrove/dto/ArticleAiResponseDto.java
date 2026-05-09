@@ -2,7 +2,7 @@ package com.emeraldgrove.dto;
 
 import com.fasterxml.jackson.annotation.JsonRawValue;
 
-public record ArticleAiResponse(
+public record ArticleAiResponseDto(
     String aiStatus,
     @JsonRawValue String aiResult
 ) {

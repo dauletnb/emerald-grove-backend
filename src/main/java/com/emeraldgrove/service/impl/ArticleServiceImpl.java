@@ -1,12 +1,12 @@
 package com.emeraldgrove.service.impl;
 
-import com.emeraldgrove.dto.ArticleAiResponse;
+import com.emeraldgrove.dto.ArticleAiResponseDto;
 import com.emeraldgrove.dto.ArticleNoteDto;
 import com.emeraldgrove.dto.ArticleSyncDto;
-import com.emeraldgrove.dto.SyncArticleNoteRequest;
-import com.emeraldgrove.dto.SyncArticlePayloadResponse;
-import com.emeraldgrove.dto.SyncArticleRequest;
-import com.emeraldgrove.dto.SyncArticleResponse;
+import com.emeraldgrove.dto.SyncArticleNoteRequestDto;
+import com.emeraldgrove.dto.SyncArticlePayloadResponseDto;
+import com.emeraldgrove.dto.SyncArticleRequestDto;
+import com.emeraldgrove.dto.SyncArticleResponseDto;
 import com.emeraldgrove.entity.AiJob;
 import com.emeraldgrove.entity.AiResult;
 import com.emeraldgrove.entity.Article;
@@ -45,7 +45,7 @@ public class ArticleServiceImpl implements ArticleService {
 
     @Override
     @Transactional
-    public SyncArticleResponse syncArticle(SyncArticleRequest request, User user) {
+    public SyncArticleResponseDto syncArticle(SyncArticleRequestDto request, User user) {
         Article existing = findExistingArticle(request, user.getId());
 
         if (existing != null) {
@@ -54,7 +54,7 @@ public class ArticleServiceImpl implements ArticleService {
 
             Article saved = articleRepository.save(existing);
             createFullAnalysisJobIfAbsent(saved);
-            return new SyncArticleResponse(SyncStatus.UPDATED, saved.getId(), SyncArticlePayloadResponse.fromEntity(saved));
+            return new SyncArticleResponseDto(SyncStatus.UPDATED, saved.getId(), SyncArticlePayloadResponseDto.fromEntity(saved));
         }
 
         try {
@@ -70,7 +70,7 @@ public class ArticleServiceImpl implements ArticleService {
 
             Article saved = articleRepository.save(article);
             createFullAnalysisJobIfAbsent(saved);
-            return new SyncArticleResponse(SyncStatus.CREATED, saved.getId(), SyncArticlePayloadResponse.fromEntity(saved));
+            return new SyncArticleResponseDto(SyncStatus.CREATED, saved.getId(), SyncArticlePayloadResponseDto.fromEntity(saved));
         } catch (DataIntegrityViolationException e) {
             // Race condition: another request from the same user created the same article
             Article raceExisting = findExistingArticle(request, user.getId());
@@ -84,7 +84,7 @@ public class ArticleServiceImpl implements ArticleService {
 
             Article saved = articleRepository.save(raceExisting);
             createFullAnalysisJobIfAbsent(saved);
-            return new SyncArticleResponse(SyncStatus.UPDATED, saved.getId(), SyncArticlePayloadResponse.fromEntity(saved));
+            return new SyncArticleResponseDto(SyncStatus.UPDATED, saved.getId(), SyncArticlePayloadResponseDto.fromEntity(saved));
         }
     }
 
@@ -121,7 +121,7 @@ public class ArticleServiceImpl implements ArticleService {
 
     @Override
     @Transactional(readOnly = true)
-    public ArticleAiResponse getAiResult(String externalId, Long userId) {
+    public ArticleAiResponseDto getAiResult(String externalId, Long userId) {
         Article article = articleRepository.findByExternalIdAndUserId(externalId, userId)
             .orElseThrow(() -> new EntityNotFoundException("Article not found: " + externalId));
 
@@ -131,7 +131,7 @@ public class ArticleServiceImpl implements ArticleService {
             .orElse(null);
 
         String content = aiResult != null ? aiResult.getContent() : null;
-        return new ArticleAiResponse(aiStatus, content);
+        return new ArticleAiResponseDto(aiStatus, content);
     }
 
     @Override
@@ -143,7 +143,7 @@ public class ArticleServiceImpl implements ArticleService {
         ensureFullAnalysisQueued(article);
     }
 
-    private Article findExistingArticle(SyncArticleRequest request, Long userId) {
+    private Article findExistingArticle(SyncArticleRequestDto request, Long userId) {
         if (request.externalId() != null && !request.externalId().isBlank()) {
             Article byExternalId = articleRepository.findByExternalIdAndUserId(request.externalId(), userId).orElse(null);
             if (byExternalId != null) {
@@ -153,7 +153,7 @@ public class ArticleServiceImpl implements ArticleService {
         return articleRepository.findByUrlAndUserId(request.url(), userId).orElse(null);
     }
 
-    private void updateArticle(Article article, SyncArticleRequest request) {
+    private void updateArticle(Article article, SyncArticleRequestDto request) {
         if ((article.getExternalId() == null || article.getExternalId().isBlank())
             && request.externalId() != null
             && !request.externalId().isBlank()) {
@@ -165,8 +165,8 @@ public class ArticleServiceImpl implements ArticleService {
         article.setDescription(sanitizeText(request.description()));
     }
 
-    private void syncNotes(Article article, List<SyncArticleNoteRequest> requestNotes) {
-        List<SyncArticleNoteRequest> safeRequestNotes = requestNotes == null ? List.of() : requestNotes;
+    private void syncNotes(Article article, List<SyncArticleNoteRequestDto> requestNotes) {
+        List<SyncArticleNoteRequestDto> safeRequestNotes = requestNotes == null ? List.of() : requestNotes;
 
         Map<String, ArticleNote> existingByExternalId = new HashMap<>();
         for (ArticleNote note : article.getNotes()) {
@@ -175,7 +175,7 @@ public class ArticleServiceImpl implements ArticleService {
 
         List<ArticleNote> nextNotes = new ArrayList<>();
 
-        for (SyncArticleNoteRequest requestNote : safeRequestNotes) {
+        for (SyncArticleNoteRequestDto requestNote : safeRequestNotes) {
             ArticleNote note = existingByExternalId.get(requestNote.id());
 
             if (note == null) {

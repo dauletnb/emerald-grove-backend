@@ -1,6 +1,6 @@
 package com.emeraldgrove.service.impl;
 
-import com.emeraldgrove.dto.AiResponse;
+import com.emeraldgrove.dto.AiResponseDto;
 import com.emeraldgrove.service.ArticleSummaryService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -135,9 +135,9 @@ public class GroqArticleSummaryService implements ArticleSummaryService {
         return normalize(contentNode.asText(""));
     }
 
-    public AiResponse analyzeArticle(String title, String description) throws IOException, InterruptedException {
+    public AiResponseDto analyzeArticle(String title, String description) throws IOException, InterruptedException {
         log.info("Groq full analysis request started: model={}, contentLength={}", groqModel, description.length());
-        AiResponse result = requestAnalysis(title, description);
+        AiResponseDto result = requestAnalysis(title, description);
         log.info("Groq full analysis request succeeded: responseLength={}, tokens={}", result.json().length(), result.tokens());
         return result;
     }
@@ -146,7 +146,7 @@ public class GroqArticleSummaryService implements ArticleSummaryService {
         return groqModel;
     }
 
-    private AiResponse requestAnalysis(String title, String description) throws IOException, InterruptedException {
+    private AiResponseDto requestAnalysis(String title, String description) throws IOException, InterruptedException {
         String prompt = """
             You are an API that returns structured JSON only.
 
@@ -200,7 +200,7 @@ public class GroqArticleSummaryService implements ArticleSummaryService {
         int tokensUsed = root.path("usage").path("total_tokens").asInt(0);
         String content = normalize(root.path("choices").path(0).path("message").path("content").asText(""));
 
-        return new AiResponse(content, tokensUsed);
+        return new AiResponseDto(content, tokensUsed);
     }
 
     private String normalize(String value) {

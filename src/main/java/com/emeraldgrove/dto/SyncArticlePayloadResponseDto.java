@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Schema(description = "Synchronized article snapshot")
-public record SyncArticlePayloadResponse(
+public record SyncArticlePayloadResponseDto(
     @Schema(description = "Persisted article identifier", example = "42")
     Long articleId,
     @Schema(description = "Client article identifier", example = "frontend-article-123")
@@ -26,10 +26,10 @@ public record SyncArticlePayloadResponse(
     @Schema(description = "AI processing status", example = "PENDING")
     String aiStatus,
     @Schema(description = "Synchronized notes")
-    List<SyncArticleNoteResponse> notes
+    List<SyncArticleNoteResponseDto> notes
 ) {
-    public static SyncArticlePayloadResponse fromEntity(Article article) {
-        return new SyncArticlePayloadResponse(
+    public static SyncArticlePayloadResponseDto fromEntity(Article article) {
+        return new SyncArticlePayloadResponseDto(
             article.getId(),
             article.getExternalId(),
             article.getUrl(),
@@ -39,7 +39,7 @@ public record SyncArticlePayloadResponse(
             toEpochMillis(article.getUpdatedAt()),
             article.getAiStatus(),
             article.getNotes().stream()
-                .map(SyncArticleNoteResponse::fromEntity)
+                .map(SyncArticleNoteResponseDto::fromEntity)
                 .toList()
         );
     }

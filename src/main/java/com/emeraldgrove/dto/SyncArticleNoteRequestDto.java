@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 @Schema(description = "Article note payload for synchronization")
-public record SyncArticleNoteRequest(
+public record SyncArticleNoteRequestDto(
     @NotBlank
     @Size(max = 64)
     @Pattern(regexp = "^[a-zA-Z0-9_-]+$")

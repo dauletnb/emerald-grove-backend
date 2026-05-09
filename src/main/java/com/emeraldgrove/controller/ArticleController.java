@@ -1,6 +1,5 @@
 package com.emeraldgrove.controller;
 
-import com.emeraldgrove.api.ArticleSyncApi;
 import com.emeraldgrove.dto.ArticleAiResponseDto;
 import com.emeraldgrove.dto.ArticleSyncDto;
 import com.emeraldgrove.dto.SyncArticleRequestDto;
@@ -23,13 +22,12 @@ import java.util.List;
 @RequestMapping("/api/articles")
 @RequiredArgsConstructor
 @Tag(name = "Articles", description = "API для управления синхронизацией статей, закладками и аналитикой на основе ИИ")
-public class ArticleSyncController implements ArticleSyncApi {
+public class ArticleController {
     private final ArticleService articleService;
     private final CurrentUserResolver currentUserResolver;
 
     @Operation(summary = "Синхронизация статьи")
     @PostMapping("/sync")
-    @Override
     public ResponseEntity<SyncArticleResponseDto> syncArticle(@Valid @RequestBody SyncArticleRequestDto request) {
         User user = currentUserResolver.getCurrentUser();
         SyncArticleResponseDto response = articleService.syncArticle(request, user);
@@ -46,7 +44,6 @@ public class ArticleSyncController implements ArticleSyncApi {
 
     @Operation(summary = "Удалить статью")
     @DeleteMapping("/{externalId}")
-    @Override
     public ResponseEntity<Void> deleteArticle(@PathVariable String externalId) {
         User user = currentUserResolver.getCurrentUser();
         articleService.deleteArticle(externalId, user.getId());
@@ -70,10 +67,8 @@ public class ArticleSyncController implements ArticleSyncApi {
 
     @Operation(summary = "Удалить заметку")
     @DeleteMapping("/{externalId}/notes/{noteId}")
-    @Override
     public ResponseEntity<Void> deleteNote(
-        @PathVariable String externalId,
-        @PathVariable String noteId
+        @PathVariable String externalId, @PathVariable String noteId
     ) {
         User user = currentUserResolver.getCurrentUser();
         articleService.deleteNote(externalId, noteId, user.getId());

@@ -100,7 +100,7 @@ public class ArticleServiceImpl implements ArticleService {
     @Transactional
     public void deleteArticle(String externalId, Long userId) {
         Article article = articleRepository.findByExternalIdAndUserId(externalId, userId)
-            .orElseThrow(() -> new EntityNotFoundException("Article not found: " + externalId));
+            .orElseThrow(() -> new EntityNotFoundException("Статья не найдена: " + externalId));
         articleRepository.delete(article);
     }
 
@@ -108,12 +108,12 @@ public class ArticleServiceImpl implements ArticleService {
     @Transactional
     public void deleteNote(String articleExternalId, String noteExternalId, Long userId) {
         Article article = articleRepository.findByExternalIdAndUserId(articleExternalId, userId)
-            .orElseThrow(() -> new EntityNotFoundException("Article not found: " + articleExternalId));
+            .orElseThrow(() -> new EntityNotFoundException("Заметка не найдена: " + articleExternalId));
 
         boolean removed = article.getNotes().removeIf(note -> note.getExternalId().equals(noteExternalId));
 
         if (!removed) {
-            throw new EntityNotFoundException("Note not found: " + noteExternalId);
+            throw new EntityNotFoundException("Заметка не найдена: " + noteExternalId);
         }
 
         articleRepository.save(article);
@@ -123,7 +123,7 @@ public class ArticleServiceImpl implements ArticleService {
     @Transactional(readOnly = true)
     public ArticleAiResponseDto getAiResult(String externalId, Long userId) {
         Article article = articleRepository.findByExternalIdAndUserId(externalId, userId)
-            .orElseThrow(() -> new EntityNotFoundException("Article not found: " + externalId));
+            .orElseThrow(() -> new EntityNotFoundException("Статья не найдена: " + externalId));
 
         String aiStatus = article.getAiStatus();
         AiResult aiResult = aiResultRepository
@@ -138,7 +138,7 @@ public class ArticleServiceImpl implements ArticleService {
     @Transactional
     public void retryAiAnalysis(String externalId, Long userId) {
         Article article = articleRepository.findByExternalIdAndUserId(externalId, userId)
-            .orElseThrow(() -> new EntityNotFoundException("Article not found: " + externalId));
+            .orElseThrow(() -> new EntityNotFoundException("Статья не найдена: " + externalId));
 
         ensureFullAnalysisQueued(article);
     }

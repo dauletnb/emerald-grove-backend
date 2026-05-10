@@ -19,6 +19,10 @@ public record SyncArticlePayloadResponseDto(
     String title,
     @Schema(description = "Article description", example = "Short description")
     String description,
+    @Schema(description = "Whether the article is marked as favorite", example = "true")
+    boolean isFavorite,
+    @Schema(description = "Whether the article is marked to read later", example = "false")
+    boolean isReadLater,
     @Schema(description = "Server creation timestamp in milliseconds", example = "1712160000000")
     Long createdAt,
     @Schema(description = "Server update timestamp in milliseconds", example = "1712160005000")
@@ -35,6 +39,8 @@ public record SyncArticlePayloadResponseDto(
             article.getUrl(),
             article.getTitle(),
             article.getDescription(),
+            article.isFavorite(),
+            article.isReadLater(),
             toEpochMillis(article.getCreatedAt()),
             toEpochMillis(article.getUpdatedAt()),
             article.getAiStatus(),

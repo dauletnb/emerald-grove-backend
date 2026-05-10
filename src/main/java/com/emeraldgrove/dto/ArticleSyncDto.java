@@ -8,6 +8,8 @@ public record ArticleSyncDto(
     String url,
     String title,
     String description,
+    boolean isFavorite,
+    boolean isReadLater,
     Long createdAt,
     Long updatedAt,
     String aiStatus,

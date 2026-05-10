@@ -1,0 +1,5 @@
+ALTER TABLE emerald_grove.article
+    ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE emerald_grove.article
+    ADD COLUMN IF NOT EXISTS is_read_later BOOLEAN NOT NULL DEFAULT FALSE;

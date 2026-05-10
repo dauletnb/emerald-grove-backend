@@ -64,6 +64,8 @@ public class ArticleServiceImpl implements ArticleService {
                 .url(request.url())
                 .title(sanitizeText(request.title()))
                 .description(sanitizeText(request.description()))
+                .isFavorite(request.isFavorite())
+                .isReadLater(request.isReadLater())
                 .build();
 
             syncNotes(article, request.notes());
@@ -163,6 +165,8 @@ public class ArticleServiceImpl implements ArticleService {
         article.setTitle(sanitizeText(request.title()));
         article.setUrl(request.url());
         article.setDescription(sanitizeText(request.description()));
+        article.setFavorite(request.isFavorite());
+        article.setReadLater(request.isReadLater());
     }
 
     private void syncNotes(Article article, List<SyncArticleNoteRequestDto> requestNotes) {
@@ -233,6 +237,8 @@ public class ArticleServiceImpl implements ArticleService {
             article.getUrl(),
             article.getTitle(),
             article.getDescription(),
+            article.isFavorite(),
+            article.isReadLater(),
             toEpochMillis(article.getCreatedAt()),
             toEpochMillis(article.getUpdatedAt()),
             article.getAiStatus(),

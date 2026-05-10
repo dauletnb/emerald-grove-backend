@@ -35,6 +35,14 @@ public class Article extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Builder.Default
+    @Column(name = "is_favorite", nullable = false)
+    private boolean isFavorite = false;
+
+    @Builder.Default
+    @Column(name = "is_read_later", nullable = false)
+    private boolean isReadLater = false;
+
     @Column(name = "ai_status", length = 20)
     private String aiStatus;
 

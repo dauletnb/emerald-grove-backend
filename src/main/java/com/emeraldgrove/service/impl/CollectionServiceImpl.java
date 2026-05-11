@@ -1,7 +1,20 @@
 package com.emeraldgrove.service.impl;
 
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.emeraldgrove.constants.ErrorMessages;
-import com.emeraldgrove.constants.LogMessages;
 import com.emeraldgrove.constants.SyncConstants;
 import com.emeraldgrove.dto.CollectionDto;
 import com.emeraldgrove.dto.CollectionLinkBatchSyncResponseDto;
@@ -19,20 +32,12 @@ import com.emeraldgrove.entity.User;
 import com.emeraldgrove.repository.ArticleCollectionLinkRepository;
 import com.emeraldgrove.repository.ArticleCollectionRepository;
 import com.emeraldgrove.repository.ArticleRepository;
+import com.emeraldgrove.repository.UserRepository;
 import com.emeraldgrove.service.CollectionService;
+
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.sql.Timestamp;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -42,13 +47,14 @@ public class CollectionServiceImpl implements CollectionService {
     private final ArticleCollectionRepository collectionRepository;
     private final ArticleCollectionLinkRepository linkRepository;
     private final ArticleRepository articleRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional
     public CollectionDto createCollection(CollectionRequestDto request, Long userId) {
         ArticleCollection collection = ArticleCollection.builder()
             .externalId(UUID.randomUUID().toString())
-            .user(User.builder().id(userId).build())
+            .user(userRepository.getReferenceById(userId))
             .name(request.name().trim())
             .build();
 
@@ -68,7 +74,10 @@ public class CollectionServiceImpl implements CollectionService {
     @Override
     @Transactional
     public void deleteCollection(String externalId, Long userId) {
-        collectionRepository.delete(getOwnedCollection(externalId, userId));
+        log.info("Deleting collection with externalId={} for userId={}", externalId, userId);
+        ArticleCollection collection = getOwnedCollectionWithLinks(externalId, userId);
+        collectionRepository.delete(collection);
+        log.info("Deleted collection with externalId={} for userId={}", externalId, userId);
     }
 
     @Override
@@ -90,7 +99,7 @@ public class CollectionServiceImpl implements CollectionService {
     @Transactional
     public void addArticleToCollection(String articleExternalId, String collectionExternalId, Long userId) {
         Article article = articleRepository.findByExternalIdAndUserId(articleExternalId, userId)
-            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_ARTICLE_NOT_FOUND + articleExternalId));
+            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_ARTICLE_NOT_FOUND.formatted(articleExternalId)));
         ArticleCollection collection = getOwnedCollection(collectionExternalId, userId);
 
         if (linkRepository.findByArticleExternalIdAndCollectionExternalId(articleExternalId, collectionExternalId).isPresent()) {
@@ -122,36 +131,56 @@ public class CollectionServiceImpl implements CollectionService {
     @Transactional(readOnly = true)
     public List<String> getArticleCollectionIds(String articleExternalId, Long userId) {
         articleRepository.findByExternalIdAndUserId(articleExternalId, userId)
-            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_ARTICLE_NOT_FOUND + articleExternalId));
+            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_ARTICLE_NOT_FOUND.formatted(articleExternalId)));
         return linkRepository.findCollectionExternalIdsByArticleExternalId(articleExternalId);
     }
 
     @Override
     @Transactional
     public SyncBatchResponseDto syncCollections(List<CollectionSyncDto> collections, Long userId) {
+        if (collections.isEmpty()) {
+            return new SyncBatchResponseDto(0, 0, List.of(), List.of());
+        }
+
+        List<String> externalIds = collections.stream()
+            .map(CollectionSyncDto::externalId)
+            .toList();
+
+        Map<String, ArticleCollection> existingMap = collectionRepository
+            .findAllByExternalIdInAndUserId(externalIds, userId)
+            .stream()
+            .collect(Collectors.toMap(ArticleCollection::getExternalId, Function.identity()));
+
+        List<ArticleCollection> toCreate = new ArrayList<>();
         List<SyncBatchItemResultDto> applied = new ArrayList<>();
         List<SyncBatchItemResultDto> skipped = new ArrayList<>();
 
+        User userRef = userRepository.getReferenceById(userId);
+
         for (CollectionSyncDto dto : collections) {
-            ArticleCollection existing = collectionRepository.findByExternalIdAndUserId(dto.externalId(), userId)
-                .orElse(null);
+            String externalId = dto.externalId();
+            String trimmedName = dto.name().trim();
+            ArticleCollection existing = existingMap.get(externalId);
 
             if (existing != null) {
-                String trimmedName = dto.name().trim();
                 if (!existing.getName().equals(trimmedName)) {
                     existing.setName(trimmedName);
-                    collectionRepository.save(existing);
+                    applied.add(new SyncBatchItemResultDto(externalId, SyncConstants.STATUS_APPLIED, null));
+                } else {
+                    skipped.add(new SyncBatchItemResultDto(externalId, SyncConstants.STATUS_SKIPPED, null));
                 }
-                applied.add(new SyncBatchItemResultDto(dto.externalId(), SyncConstants.STATUS_APPLIED, null));
-                continue;
+            } else {
+                toCreate.add(ArticleCollection.builder()
+                    .externalId(externalId)
+                    .user(userRef)
+                    .name(trimmedName)
+                    .build());
+                applied.add(new SyncBatchItemResultDto(externalId, SyncConstants.STATUS_APPLIED, null));
             }
+        }
 
-            collectionRepository.save(ArticleCollection.builder()
-                .externalId(dto.externalId())
-                .user(User.builder().id(userId).build())
-                .name(dto.name().trim())
-                .build());
-            applied.add(new SyncBatchItemResultDto(dto.externalId(), SyncConstants.STATUS_APPLIED, null));
+        if (!toCreate.isEmpty()) {
+            collectionRepository.saveAll(toCreate);
         }
 
         return new SyncBatchResponseDto(applied.size(), skipped.size(), applied, skipped);
@@ -170,7 +199,7 @@ public class CollectionServiceImpl implements CollectionService {
 
             if (article == null || collection == null) {
                 log.warn(
-                    LogMessages.LOG_SKIPPING_COLLECTION_LINK_SYNC,
+                    "Skipping collection link sync for user {}: article={}, collection={}",
                     userId,
                     dto.articleExternalId(),
                     dto.collectionExternalId()
@@ -217,6 +246,7 @@ public class CollectionServiceImpl implements CollectionService {
     @Override
     @Transactional
     public SyncBatchResponseDto syncDeletedCollections(List<String> externalIds, Long userId) {
+        log.info("Syncing deleted collections. Count={}, userId={}", externalIds.size(), userId);
         List<SyncBatchItemResultDto> applied = new ArrayList<>();
         List<SyncBatchItemResultDto> skipped = new ArrayList<>();
 
@@ -224,20 +254,24 @@ public class CollectionServiceImpl implements CollectionService {
             ArticleCollection collection = collectionRepository.findByExternalIdAndUserId(externalId, userId).orElse(null);
 
             if (collection == null) {
+                log.debug("Skipping deleted collection sync: collection not found. externalId={}", externalId);
                 skipped.add(new SyncBatchItemResultDto(externalId, SyncConstants.STATUS_SKIPPED, SyncConstants.ERROR_CODE_COLLECTION_NOT_FOUND));
                 continue;
             }
 
             collectionRepository.delete(collection);
+            log.debug("Deleted collection during sync. externalId={}", externalId);
             applied.add(new SyncBatchItemResultDto(externalId, SyncConstants.STATUS_APPLIED, null));
         }
 
+        log.info("Finished syncing deleted collections. applied={}, skipped={}", applied.size(), skipped.size());
         return new SyncBatchResponseDto(applied.size(), skipped.size(), applied, skipped);
     }
 
     @Override
     @Transactional
     public CollectionLinkBatchSyncResponseDto syncDeletedCollectionLinks(List<CollectionLinkDeletionDto> links, Long userId) {
+        log.info("Syncing deleted collection links. Count={}, userId={}", links.size(), userId);
         List<CollectionLinkSyncResultDto> applied = new ArrayList<>();
         List<CollectionLinkSyncResultDto> skipped = new ArrayList<>();
 
@@ -279,12 +313,18 @@ public class CollectionServiceImpl implements CollectionService {
             ));
         }
 
+        log.info("Finished syncing deleted collection links. applied={}, skipped={}", applied.size(), skipped.size());
         return new CollectionLinkBatchSyncResponseDto(applied.size(), skipped.size(), applied, skipped);
     }
 
     private ArticleCollection getOwnedCollection(String externalId, Long userId) {
         return collectionRepository.findByExternalIdAndUserId(externalId, userId)
-            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_COLLECTION_NOT_FOUND + externalId));
+            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_COLLECTION_NOT_FOUND.formatted(externalId)));
+    }
+
+    private ArticleCollection getOwnedCollectionWithLinks(String externalId, Long userId) {
+        return collectionRepository.findByExternalIdAndUserIdWithLinks(externalId, userId)
+            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_COLLECTION_NOT_FOUND.formatted(externalId)));
     }
 
     private CollectionSyncDto toSyncDto(ArticleCollection collection) {

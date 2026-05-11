@@ -6,16 +6,16 @@ public final class ErrorMessages {
     }
     
     // Error messages (Russian)
-    public static final String ERROR_ARTICLE_NOT_FOUND = "Статья не найдена: ";
-    public static final String ERROR_COLLECTION_NOT_FOUND = "Коллекция не найдена: ";
-    public static final String ERROR_NOTE_NOT_FOUND = "Заметка не найдена: ";
+    public static final String ERROR_ARTICLE_NOT_FOUND = "Статья не найдена: %s";
+    public static final String ERROR_COLLECTION_NOT_FOUND = "Коллекция не найдена: %s";
+    public static final String ERROR_NOTE_NOT_FOUND = "Заметка не найдена: %s";
     
     // Error messages (English)
     public static final String ERROR_RACE_CONDITION = "Race condition: article not found after conflict";
     
     // AI-related error messages
-    public static final String ERROR_UNKNOWN_JOB_TYPE = "Unknown job type: ";
-    public static final String ERROR_GROQ_ANALYSIS_FAILED = "Groq analysis failed: ";
+    public static final String ERROR_UNKNOWN_JOB_TYPE = "Unknown job type: %s";
+    public static final String ERROR_GROQ_ANALYSIS_FAILED = "Groq analysis failed: %s";
     public static final String ERROR_AI_RESULT_SERIALIZATION_FAILED = "Failed to serialize AI result";
     
     // Auth-related error messages

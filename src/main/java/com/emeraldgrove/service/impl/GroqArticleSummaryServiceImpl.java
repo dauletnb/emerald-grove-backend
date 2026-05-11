@@ -1,17 +1,5 @@
 package com.emeraldgrove.service.impl;
 
-import com.emeraldgrove.constants.ErrorMessages;
-import com.emeraldgrove.constants.GroqConstants;
-import com.emeraldgrove.constants.LogMessages;
-import com.emeraldgrove.dto.AiResponseDto;
-import com.emeraldgrove.service.ArticleSummaryService;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Service;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -19,6 +7,19 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
+
+import com.emeraldgrove.constants.ErrorMessages;
+import com.emeraldgrove.constants.GroqConstants;
+import com.emeraldgrove.dto.AiResponseDto;
+import com.emeraldgrove.service.ArticleSummaryService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -59,35 +60,35 @@ public class GroqArticleSummaryServiceImpl implements ArticleSummaryService {
         String normalizedCurrent = normalize(currentStoredDescription);
 
         if (normalizedSource.isBlank()) {
-            log.info(LogMessages.LOG_GROQ_SUMMARY_SKIPPED_BLANK);
+            log.info("Groq summary skipped: source description is blank");
             return normalizedCurrent;
         }
 
         if (normalizedSource.equals(normalizedCurrent)) {
-            log.info(LogMessages.LOG_GROQ_SUMMARY_SKIPPED_UNCHANGED);
+            log.info("Groq summary skipped: source description is unchanged");
             return normalizedCurrent;
         }
 
         if (!groqEnabled) {
-            log.info(LogMessages.LOG_GROQ_SUMMARY_SKIPPED_DISABLED);
+            log.info("Groq summary skipped: emerald-grove.ai.groq.enabled=false");
             return trimToLimit(normalizedSource);
         }
 
         if (groqApiKey.isBlank()) {
-            log.warn(LogMessages.LOG_GROQ_SUMMARY_SKIPPED_NO_KEY);
+            log.warn("Groq summary skipped: GROQ_API_KEY is empty or unavailable in the backend process");
             return trimToLimit(normalizedSource);
         }
 
         try {
-            log.info(LogMessages.LOG_GROQ_SUMMARY_REQUEST_STARTED, groqModel, normalizedSource.length());
+            log.info("Groq summary request started: model={}, sourceLength={}", groqModel, normalizedSource.length());
             String generatedSummary = requestSummary(title, normalizedSource);
             if (!generatedSummary.isBlank()) {
-                log.info(LogMessages.LOG_GROQ_SUMMARY_REQUEST_SUCCEEDED, generatedSummary.length());
+                log.info("Groq summary request succeeded: summaryLength={}", generatedSummary.length());
                 return trimToLimit(generatedSummary);
             }
-            log.warn(LogMessages.LOG_GROQ_SUMMARY_RESPONSE_EMPTY);
-        } catch (Exception exception) {
-            log.warn(LogMessages.LOG_GROQ_SUMMARY_GENERATION_FAILED, exception.getMessage());
+            log.warn("Groq summary response was empty, using local fallback");
+        } catch (IOException | InterruptedException exception) {
+            log.warn("Groq summary generation failed, using local fallback: {}", exception.getMessage());
         }
 
         return trimToLimit(normalizedSource);
@@ -130,9 +131,9 @@ public class GroqArticleSummaryServiceImpl implements ArticleSummaryService {
     }
 
     public AiResponseDto analyzeArticle(String title, String description) throws IOException, InterruptedException {
-        log.info(LogMessages.LOG_GROQ_ANALYSIS_REQUEST_STARTED, groqModel, description.length());
+        log.info("Groq full analysis request started: model={}, contentLength={}", groqModel, description.length());
         AiResponseDto result = requestAnalysis(title, description);
-        log.info(LogMessages.LOG_GROQ_ANALYSIS_REQUEST_SUCCEEDED, result.json().length(), result.tokens());
+        log.info("Groq full analysis request succeeded: responseLength={}, tokens={}", result.json().length(), result.tokens());
         return result;
     }
 

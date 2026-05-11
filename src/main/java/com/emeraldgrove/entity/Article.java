@@ -1,11 +1,26 @@
 package com.emeraldgrove.entity;
 
-import com.emeraldgrove.entity.baseEntity.BaseEntity;
-import jakarta.persistence.*;
-import lombok.*;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import com.emeraldgrove.entity.baseEntity.BaseEntity;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "article", schema = "emerald_grove")
@@ -49,4 +64,16 @@ public class Article extends BaseEntity {
     @OneToMany(mappedBy = "article", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<ArticleNote> notes = new ArrayList<>();
+
+    @OneToMany(mappedBy = "article")
+    @Builder.Default
+    private List<AiJob> aiJobs = new ArrayList<>();
+
+    @OneToMany(mappedBy = "article")
+    @Builder.Default
+    private List<AiResult> aiResults = new ArrayList<>();
+
+    @OneToMany(mappedBy = "article")
+    @Builder.Default
+    private List<ArticleCollectionLink> collectionLinks = new ArrayList<>();
 }

@@ -14,10 +14,6 @@ public interface ArticleCollectionLinkRepository extends JpaRepository<ArticleCo
         String collectionExternalId
     );
 
-    List<ArticleCollectionLink> findAllByCollectionExternalId(String collectionExternalId);
-
-    List<ArticleCollectionLink> findAllByArticleExternalId(String articleExternalId);
-
     @Query("""
         select link.article.externalId
         from ArticleCollectionLink link

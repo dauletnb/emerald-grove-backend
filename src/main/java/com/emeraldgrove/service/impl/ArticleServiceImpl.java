@@ -1,8 +1,14 @@
 package com.emeraldgrove.service.impl;
 
+import com.emeraldgrove.constants.AiStatusConstants;
+import com.emeraldgrove.constants.ErrorMessages;
+import com.emeraldgrove.constants.SyncConstants;
 import com.emeraldgrove.dto.ArticleAiResponseDto;
+import com.emeraldgrove.dto.ArticleDeletionSyncRequestDto;
 import com.emeraldgrove.dto.ArticleNoteDto;
 import com.emeraldgrove.dto.ArticleSyncDto;
+import com.emeraldgrove.dto.SyncBatchItemResultDto;
+import com.emeraldgrove.dto.SyncBatchResponseDto;
 import com.emeraldgrove.dto.SyncArticleNoteRequestDto;
 import com.emeraldgrove.dto.SyncArticlePayloadResponseDto;
 import com.emeraldgrove.dto.SyncArticleRequestDto;
@@ -18,12 +24,11 @@ import com.emeraldgrove.repository.AiResultRepository;
 import com.emeraldgrove.repository.ArticleRepository;
 import com.emeraldgrove.security.XssSanitizer;
 import com.emeraldgrove.service.ArticleService;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import jakarta.persistence.EntityNotFoundException;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -74,11 +79,10 @@ public class ArticleServiceImpl implements ArticleService {
             createFullAnalysisJobIfAbsent(saved);
             return new SyncArticleResponseDto(SyncStatus.CREATED, saved.getId(), SyncArticlePayloadResponseDto.fromEntity(saved));
         } catch (DataIntegrityViolationException e) {
-            // Race condition: another request from the same user created the same article
             Article raceExisting = findExistingArticle(request, user.getId());
 
             if (raceExisting == null) {
-                throw new IllegalStateException("Race condition: article not found after conflict", e);
+                throw new IllegalStateException(ErrorMessages.ERROR_RACE_CONDITION, e);
             }
 
             updateArticle(raceExisting, request);
@@ -102,20 +106,41 @@ public class ArticleServiceImpl implements ArticleService {
     @Transactional
     public void deleteArticle(String externalId, Long userId) {
         Article article = articleRepository.findByExternalIdAndUserId(externalId, userId)
-            .orElseThrow(() -> new EntityNotFoundException("Статья не найдена: " + externalId));
+            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_ARTICLE_NOT_FOUND + externalId));
         articleRepository.delete(article);
+    }
+
+    @Override
+    @Transactional
+    public SyncBatchResponseDto syncDeletedArticles(ArticleDeletionSyncRequestDto request, Long userId) {
+        List<SyncBatchItemResultDto> applied = new ArrayList<>();
+        List<SyncBatchItemResultDto> skipped = new ArrayList<>();
+
+        for (String externalId : request.articleExternalIds()) {
+            Article article = articleRepository.findByExternalIdAndUserId(externalId, userId).orElse(null);
+
+            if (article == null) {
+                skipped.add(new SyncBatchItemResultDto(externalId, SyncConstants.STATUS_SKIPPED, SyncConstants.ERROR_CODE_ARTICLE_NOT_FOUND));
+                continue;
+            }
+
+            articleRepository.delete(article);
+            applied.add(new SyncBatchItemResultDto(externalId, SyncConstants.STATUS_APPLIED, null));
+        }
+
+        return new SyncBatchResponseDto(applied.size(), skipped.size(), applied, skipped);
     }
 
     @Override
     @Transactional
     public void deleteNote(String articleExternalId, String noteExternalId, Long userId) {
         Article article = articleRepository.findByExternalIdAndUserId(articleExternalId, userId)
-            .orElseThrow(() -> new EntityNotFoundException("Заметка не найдена: " + articleExternalId));
+            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_NOTE_NOT_FOUND + articleExternalId));
 
         boolean removed = article.getNotes().removeIf(note -> note.getExternalId().equals(noteExternalId));
 
         if (!removed) {
-            throw new EntityNotFoundException("Заметка не найдена: " + noteExternalId);
+            throw new EntityNotFoundException(ErrorMessages.ERROR_NOTE_NOT_FOUND + noteExternalId);
         }
 
         articleRepository.save(article);
@@ -125,7 +150,7 @@ public class ArticleServiceImpl implements ArticleService {
     @Transactional(readOnly = true)
     public ArticleAiResponseDto getAiResult(String externalId, Long userId) {
         Article article = articleRepository.findByExternalIdAndUserId(externalId, userId)
-            .orElseThrow(() -> new EntityNotFoundException("Статья не найдена: " + externalId));
+            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_ARTICLE_NOT_FOUND + externalId));
 
         String aiStatus = article.getAiStatus();
         AiResult aiResult = aiResultRepository
@@ -140,7 +165,7 @@ public class ArticleServiceImpl implements ArticleService {
     @Transactional
     public void retryAiAnalysis(String externalId, Long userId) {
         Article article = articleRepository.findByExternalIdAndUserId(externalId, userId)
-            .orElseThrow(() -> new EntityNotFoundException("Статья не найдена: " + externalId));
+            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_ARTICLE_NOT_FOUND + externalId));
 
         ensureFullAnalysisQueued(article);
     }
@@ -211,18 +236,18 @@ public class ArticleServiceImpl implements ArticleService {
             .orElse(null);
 
         if (latestJob == null) {
-            article.setAiStatus("PENDING");
+            article.setAiStatus(AiStatusConstants.AI_STATUS_PENDING);
             aiJobRepository.save(AiJob.createFullAnalysisJob(article));
             return;
         }
 
-        if ("DONE".equals(latestJob.getStatus()) || "PENDING".equals(latestJob.getStatus()) || "PROCESSING".equals(latestJob.getStatus())) {
+        if (AiStatusConstants.AI_STATUS_DONE.equals(latestJob.getStatus()) || AiStatusConstants.AI_STATUS_PENDING.equals(latestJob.getStatus()) || AiStatusConstants.AI_STATUS_PROCESSING.equals(latestJob.getStatus())) {
             return;
         }
 
-        latestJob.setStatus("PENDING");
+        latestJob.setStatus(AiStatusConstants.AI_STATUS_PENDING);
         latestJob.setRetries(0);
-        article.setAiStatus("PENDING");
+        article.setAiStatus(AiStatusConstants.AI_STATUS_PENDING);
         aiJobRepository.save(latestJob);
     }
 
@@ -257,7 +282,7 @@ public class ArticleServiceImpl implements ArticleService {
         );
     }
 
-    private Long toEpochMillis(java.time.LocalDateTime value) {
+    private Long toEpochMillis(LocalDateTime value) {
         return value == null ? null : Timestamp.valueOf(value).getTime();
     }
 

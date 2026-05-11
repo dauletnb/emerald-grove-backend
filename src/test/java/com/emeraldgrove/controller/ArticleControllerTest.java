@@ -1,6 +1,9 @@
 package com.emeraldgrove.controller;
 
+import com.emeraldgrove.dto.ArticleDeletionSyncRequestDto;
 import com.emeraldgrove.dto.ArticleSyncDto;
+import com.emeraldgrove.dto.SyncBatchItemResultDto;
+import com.emeraldgrove.dto.SyncBatchResponseDto;
 import com.emeraldgrove.dto.SyncArticlePayloadResponseDto;
 import com.emeraldgrove.dto.SyncArticleRequestDto;
 import com.emeraldgrove.dto.SyncArticleResponseDto;
@@ -117,5 +120,26 @@ class ArticleControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].isFavorite").value(true))
             .andExpect(jsonPath("$[0].isReadLater").value(false));
+    }
+
+    @Test
+    void syncDeletedArticlesReturnsDiagnostics() throws Exception {
+        ArticleDeletionSyncRequestDto request = new ArticleDeletionSyncRequestDto(List.of("article-1", "article-2"));
+
+        when(articleService.syncDeletedArticles(eq(request), eq(1L)))
+            .thenReturn(new SyncBatchResponseDto(
+                1,
+                1,
+                List.of(new SyncBatchItemResultDto("article-1", "APPLIED", null)),
+                List.of(new SyncBatchItemResultDto("article-2", "SKIPPED", "ARTICLE_NOT_FOUND"))
+            ));
+
+        mockMvc.perform(post("/api/articles/sync/deletions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.appliedCount").value(1))
+            .andExpect(jsonPath("$.skippedCount").value(1))
+            .andExpect(jsonPath("$.skipped[0].reason").value("ARTICLE_NOT_FOUND"));
     }
 }

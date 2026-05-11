@@ -1,5 +1,8 @@
 package com.emeraldgrove.service.impl;
 
+import com.emeraldgrove.constants.AiConstants;
+import com.emeraldgrove.constants.ErrorMessages;
+import com.emeraldgrove.constants.LogMessages;
 import com.emeraldgrove.dto.AiResponseDto;
 import com.emeraldgrove.dto.AiResultDto;
 import com.emeraldgrove.entity.AiJob;
@@ -16,14 +19,14 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AiOrchestrator {
 
-    private final GroqArticleSummaryService groqService;
+    private final GroqArticleSummaryServiceImpl groqService;
     private final AiResultRepository aiResultRepository;
     private final ObjectMapper objectMapper;
 
     public void processJob(AiJob job) {
         switch (job.getType()) {
             case AiJob.TYPE_FULL_ANALYSIS -> processFull(job);
-            default -> throw new IllegalArgumentException("Unknown job type: " + job.getType());
+            default -> throw new IllegalArgumentException(ErrorMessages.ERROR_UNKNOWN_JOB_TYPE + job.getType());
         }
     }
 
@@ -31,15 +34,15 @@ public class AiOrchestrator {
         Article article = job.getArticle();
 
         String content = article.getDescription();
-        if (content != null && content.length() > 8000) {
-            content = content.substring(0, 8000);
+        if (content != null && content.length() > AiConstants.MAX_CONTENT_LENGTH) {
+            content = content.substring(0, AiConstants.MAX_CONTENT_LENGTH);
         }
 
         AiResponseDto aiResponseDto;
         try {
             aiResponseDto = groqService.analyzeArticle(article.getTitle(), content);
         } catch (Exception e) {
-            throw new RuntimeException("Groq analysis failed: " + e.getMessage(), e);
+            throw new RuntimeException(ErrorMessages.ERROR_GROQ_ANALYSIS_FAILED + e.getMessage(), e);
         }
 
         AiResultDto result = validate(aiResponseDto.json());
@@ -48,7 +51,7 @@ public class AiOrchestrator {
         try {
             contentJson = objectMapper.writeValueAsString(result);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to serialize AI result", e);
+            throw new RuntimeException(ErrorMessages.ERROR_AI_RESULT_SERIALIZATION_FAILED, e);
         }
 
         aiResultRepository.save(new AiResult(
@@ -59,18 +62,18 @@ public class AiOrchestrator {
             aiResponseDto.tokens()
         ));
 
-        log.info("AI result saved for article {}, tokensUsed={}", article.getId(), aiResponseDto.tokens());
+        log.info(LogMessages.LOG_AI_RESULT_SAVED, article.getId(), aiResponseDto.tokens());
     }
 
     private AiResultDto validate(String json) {
         try {
             String cleaned = json.trim();
-            if (cleaned.startsWith("```")) {
-                cleaned = cleaned.replaceAll("(?s)^```[a-zA-Z]*\\s*", "").replaceAll("(?s)```\\s*$", "").trim();
+            if (cleaned.startsWith(AiConstants.MARKDOWN_CODE_BLOCK_START)) {
+                cleaned = cleaned.replaceAll(AiConstants.MARKDOWN_CODE_BLOCK_PATTERN, "").replaceAll(AiConstants.MARKDOWN_CODE_BLOCK_END_PATTERN, "").trim();
             }
             return objectMapper.readValue(cleaned, AiResultDto.class);
         } catch (Exception e) {
-            log.error("AI response validation failed, using empty result: {}", e.getMessage());
+            log.error(LogMessages.LOG_AI_VALIDATION_FAILED, e.getMessage());
             return new AiResultDto();
         }
     }

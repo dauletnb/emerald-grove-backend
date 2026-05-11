@@ -2,7 +2,6 @@ package com.emeraldgrove.service.impl;
 
 import com.emeraldgrove.constants.AiConstants;
 import com.emeraldgrove.constants.AiStatusConstants;
-import com.emeraldgrove.constants.LogMessages;
 import com.emeraldgrove.entity.AiJob;
 import com.emeraldgrove.repository.AiJobRepository;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +41,7 @@ public class AiWorker {
                 job.setStatus(AiStatusConstants.AI_STATUS_DONE);
                 job.getArticle().setAiStatus(AiStatusConstants.AI_STATUS_DONE);
             } catch (Exception e) {
-                log.error(LogMessages.LOG_AI_JOB_FAILED, job.getId(), job.getRetries() + 1, e.getMessage());
+                log.error("AI job {} failed (attempt {}): {}", job.getId(), job.getRetries() + 1, e.getMessage());
                 job.setRetries(job.getRetries() + 1);
                 job.setStatus(AiStatusConstants.AI_STATUS_FAILED);
                 job.getArticle().setAiStatus(AiStatusConstants.AI_STATUS_FAILED);

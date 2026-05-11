@@ -1,5 +1,19 @@
 package com.emeraldgrove.service;
 
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.any;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 import com.emeraldgrove.dto.ArticleDeletionSyncRequestDto;
 import com.emeraldgrove.dto.ArticleSyncDto;
 import com.emeraldgrove.dto.SyncArticleRequestDto;
@@ -9,24 +23,9 @@ import com.emeraldgrove.entity.Article;
 import com.emeraldgrove.entity.User;
 import com.emeraldgrove.enums.SyncStatus;
 import com.emeraldgrove.repository.AiJobRepository;
-import com.emeraldgrove.repository.AiResultRepository;
 import com.emeraldgrove.repository.ArticleRepository;
 import com.emeraldgrove.security.XssSanitizer;
 import com.emeraldgrove.service.impl.ArticleServiceImpl;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.List;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ArticleServiceImplTest {

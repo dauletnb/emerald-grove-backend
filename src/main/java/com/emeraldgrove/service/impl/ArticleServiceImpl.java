@@ -1,35 +1,5 @@
 package com.emeraldgrove.service.impl;
 
-import com.emeraldgrove.constants.AiStatusConstants;
-import com.emeraldgrove.constants.ErrorMessages;
-import com.emeraldgrove.constants.SyncConstants;
-import com.emeraldgrove.dto.ArticleAiResponseDto;
-import com.emeraldgrove.dto.ArticleDeletionSyncRequestDto;
-import com.emeraldgrove.dto.ArticleNoteDto;
-import com.emeraldgrove.dto.ArticleSyncDto;
-import com.emeraldgrove.dto.SyncBatchItemResultDto;
-import com.emeraldgrove.dto.SyncBatchResponseDto;
-import com.emeraldgrove.dto.SyncArticleNoteRequestDto;
-import com.emeraldgrove.dto.SyncArticlePayloadResponseDto;
-import com.emeraldgrove.dto.SyncArticleRequestDto;
-import com.emeraldgrove.dto.SyncArticleResponseDto;
-import com.emeraldgrove.entity.AiJob;
-import com.emeraldgrove.entity.AiResult;
-import com.emeraldgrove.entity.Article;
-import com.emeraldgrove.entity.ArticleNote;
-import com.emeraldgrove.entity.User;
-import com.emeraldgrove.enums.SyncStatus;
-import com.emeraldgrove.repository.AiJobRepository;
-import com.emeraldgrove.repository.AiResultRepository;
-import com.emeraldgrove.repository.ArticleRepository;
-import com.emeraldgrove.security.XssSanitizer;
-import com.emeraldgrove.service.ArticleService;
-import jakarta.persistence.EntityNotFoundException;
-import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -39,11 +9,47 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.emeraldgrove.constants.AiStatusConstants;
+import com.emeraldgrove.constants.ErrorMessages;
+import com.emeraldgrove.constants.SyncConstants;
+import com.emeraldgrove.dto.ArticleAiResponseDto;
+import com.emeraldgrove.dto.ArticleDeletionSyncRequestDto;
+import com.emeraldgrove.dto.ArticleNoteDto;
+import com.emeraldgrove.dto.ArticleSyncDto;
+import com.emeraldgrove.dto.SyncArticleNoteRequestDto;
+import com.emeraldgrove.dto.SyncArticlePayloadResponseDto;
+import com.emeraldgrove.dto.SyncArticleRequestDto;
+import com.emeraldgrove.dto.SyncArticleResponseDto;
+import com.emeraldgrove.dto.SyncBatchItemResultDto;
+import com.emeraldgrove.dto.SyncBatchResponseDto;
+import com.emeraldgrove.entity.AiJob;
+import com.emeraldgrove.entity.AiResult;
+import com.emeraldgrove.entity.Article;
+import com.emeraldgrove.entity.ArticleNote;
+import com.emeraldgrove.entity.User;
+import com.emeraldgrove.enums.SyncStatus;
+import com.emeraldgrove.repository.AiJobRepository;
+import com.emeraldgrove.repository.AiResultRepository;
+import com.emeraldgrove.repository.ArticleNoteRepository;
+import com.emeraldgrove.repository.ArticleRepository;
+import com.emeraldgrove.security.XssSanitizer;
+import com.emeraldgrove.service.ArticleService;
+
+import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ArticleServiceImpl implements ArticleService {
 
     private final ArticleRepository articleRepository;
+    private final ArticleNoteRepository articleNoteRepository;
     private final AiJobRepository aiJobRepository;
     private final AiResultRepository aiResultRepository;
     private final XssSanitizer xssSanitizer;
@@ -105,14 +111,17 @@ public class ArticleServiceImpl implements ArticleService {
     @Override
     @Transactional
     public void deleteArticle(String externalId, Long userId) {
+        log.info("Deleting article. externalId={}, userId={}", externalId, userId);
         Article article = articleRepository.findByExternalIdAndUserId(externalId, userId)
-            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_ARTICLE_NOT_FOUND + externalId));
+            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_ARTICLE_NOT_FOUND.formatted(externalId)));
         articleRepository.delete(article);
+        log.info("Deleted article. externalId={}, userId={}", externalId, userId);
     }
 
     @Override
     @Transactional
     public SyncBatchResponseDto syncDeletedArticles(ArticleDeletionSyncRequestDto request, Long userId) {
+        log.info("Syncing deleted articles. Count={}, userId={}", request.articleExternalIds().size(), userId);
         List<SyncBatchItemResultDto> applied = new ArrayList<>();
         List<SyncBatchItemResultDto> skipped = new ArrayList<>();
 
@@ -120,37 +129,36 @@ public class ArticleServiceImpl implements ArticleService {
             Article article = articleRepository.findByExternalIdAndUserId(externalId, userId).orElse(null);
 
             if (article == null) {
+                log.debug("Skipping deleted article sync: article not found. externalId={}", externalId);
                 skipped.add(new SyncBatchItemResultDto(externalId, SyncConstants.STATUS_SKIPPED, SyncConstants.ERROR_CODE_ARTICLE_NOT_FOUND));
                 continue;
             }
 
             articleRepository.delete(article);
+            log.debug("Deleted article during sync. externalId={}", externalId);
             applied.add(new SyncBatchItemResultDto(externalId, SyncConstants.STATUS_APPLIED, null));
         }
 
+        log.info("Finished syncing deleted articles. applied={}, skipped={}", applied.size(), skipped.size());
         return new SyncBatchResponseDto(applied.size(), skipped.size(), applied, skipped);
     }
 
     @Override
     @Transactional
     public void deleteNote(String articleExternalId, String noteExternalId, Long userId) {
-        Article article = articleRepository.findByExternalIdAndUserId(articleExternalId, userId)
-            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_NOTE_NOT_FOUND + articleExternalId));
+        log.info("Deleting note. noteExternalId={}, articleExternalId={}, userId={}", noteExternalId, articleExternalId, userId);
+        articleRepository.findByExternalIdAndUserId(articleExternalId, userId)
+            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_NOTE_NOT_FOUND.formatted(articleExternalId)));
 
-        boolean removed = article.getNotes().removeIf(note -> note.getExternalId().equals(noteExternalId));
-
-        if (!removed) {
-            throw new EntityNotFoundException(ErrorMessages.ERROR_NOTE_NOT_FOUND + noteExternalId);
-        }
-
-        articleRepository.save(article);
+        articleNoteRepository.deleteByExternalIdAndArticleExternalId(noteExternalId, articleExternalId);
+        log.info("Deleted note. noteExternalId={}, articleExternalId={}", noteExternalId, articleExternalId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public ArticleAiResponseDto getAiResult(String externalId, Long userId) {
         Article article = articleRepository.findByExternalIdAndUserId(externalId, userId)
-            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_ARTICLE_NOT_FOUND + externalId));
+            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_ARTICLE_NOT_FOUND.formatted(externalId)));
 
         String aiStatus = article.getAiStatus();
         AiResult aiResult = aiResultRepository
@@ -165,7 +173,7 @@ public class ArticleServiceImpl implements ArticleService {
     @Transactional
     public void retryAiAnalysis(String externalId, Long userId) {
         Article article = articleRepository.findByExternalIdAndUserId(externalId, userId)
-            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_ARTICLE_NOT_FOUND + externalId));
+            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_ARTICLE_NOT_FOUND.formatted(externalId)));
 
         ensureFullAnalysisQueued(article);
     }

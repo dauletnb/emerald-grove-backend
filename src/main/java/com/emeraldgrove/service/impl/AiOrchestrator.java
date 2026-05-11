@@ -1,8 +1,9 @@
 package com.emeraldgrove.service.impl;
 
+import org.springframework.stereotype.Service;
+
 import com.emeraldgrove.constants.AiConstants;
 import com.emeraldgrove.constants.ErrorMessages;
-import com.emeraldgrove.constants.LogMessages;
 import com.emeraldgrove.dto.AiResponseDto;
 import com.emeraldgrove.dto.AiResultDto;
 import com.emeraldgrove.entity.AiJob;
@@ -10,9 +11,9 @@ import com.emeraldgrove.entity.AiResult;
 import com.emeraldgrove.entity.Article;
 import com.emeraldgrove.repository.AiResultRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
@@ -26,7 +27,7 @@ public class AiOrchestrator {
     public void processJob(AiJob job) {
         switch (job.getType()) {
             case AiJob.TYPE_FULL_ANALYSIS -> processFull(job);
-            default -> throw new IllegalArgumentException(ErrorMessages.ERROR_UNKNOWN_JOB_TYPE + job.getType());
+            default -> throw new IllegalArgumentException(ErrorMessages.ERROR_UNKNOWN_JOB_TYPE.formatted(job.getType()));
         }
     }
 
@@ -42,7 +43,7 @@ public class AiOrchestrator {
         try {
             aiResponseDto = groqService.analyzeArticle(article.getTitle(), content);
         } catch (Exception e) {
-            throw new RuntimeException(ErrorMessages.ERROR_GROQ_ANALYSIS_FAILED + e.getMessage(), e);
+            throw new RuntimeException(ErrorMessages.ERROR_GROQ_ANALYSIS_FAILED.formatted(e.getMessage()), e);
         }
 
         AiResultDto result = validate(aiResponseDto.json());
@@ -62,7 +63,7 @@ public class AiOrchestrator {
             aiResponseDto.tokens()
         ));
 
-        log.info(LogMessages.LOG_AI_RESULT_SAVED, article.getId(), aiResponseDto.tokens());
+        log.info("AI result saved for article {}, tokensUsed={}", article.getId(), aiResponseDto.tokens());
     }
 
     private AiResultDto validate(String json) {
@@ -73,7 +74,7 @@ public class AiOrchestrator {
             }
             return objectMapper.readValue(cleaned, AiResultDto.class);
         } catch (Exception e) {
-            log.error(LogMessages.LOG_AI_VALIDATION_FAILED, e.getMessage());
+            log.error("AI response validation failed, using empty result: {}", e.getMessage());
             return new AiResultDto();
         }
     }

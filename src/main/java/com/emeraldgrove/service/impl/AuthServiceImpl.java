@@ -9,6 +9,8 @@ import com.emeraldgrove.exception.AuthException;
 import com.emeraldgrove.repository.RefreshTokenRepository;
 import com.emeraldgrove.repository.UserRepository;
 import com.emeraldgrove.security.JwtService;
+import com.emeraldgrove.constants.AuthConstants;
+import com.emeraldgrove.constants.ErrorMessages;
 import com.emeraldgrove.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,7 +40,7 @@ public class AuthServiceImpl implements AuthService {
         String email = request.email().toLowerCase().trim();
 
         if (userRepository.existsByEmail(email)) {
-            throw new AuthException("Email is already registered.", HttpStatus.CONFLICT);
+            throw new AuthException(ErrorMessages.ERROR_EMAIL_ALREADY_REGISTERED, HttpStatus.CONFLICT);
         }
 
         String displayName = (request.displayName() != null && !request.displayName().isBlank())
@@ -61,10 +63,10 @@ public class AuthServiceImpl implements AuthService {
         String email = request.email().toLowerCase().trim();
 
         User user = userRepository.findByEmail(email)
-            .orElseThrow(() -> new AuthException("Invalid email or password.", HttpStatus.UNAUTHORIZED));
+            .orElseThrow(() -> new AuthException(ErrorMessages.ERROR_INVALID_CREDENTIALS, HttpStatus.UNAUTHORIZED));
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new AuthException("Invalid email or password.", HttpStatus.UNAUTHORIZED);
+            throw new AuthException(ErrorMessages.ERROR_INVALID_CREDENTIALS, HttpStatus.UNAUTHORIZED);
         }
 
         return buildAuthResponse(user);
@@ -74,14 +76,14 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public AuthResponseDto refresh(String refreshToken) {
         RefreshToken stored = refreshTokenRepository.findByToken(refreshToken)
-            .orElseThrow(() -> new AuthException("Invalid refresh token.", HttpStatus.UNAUTHORIZED));
+            .orElseThrow(() -> new AuthException(ErrorMessages.ERROR_INVALID_REFRESH_TOKEN, HttpStatus.UNAUTHORIZED));
 
         if (stored.isRevoked()) {
-            throw new AuthException("Refresh token has been revoked.", HttpStatus.UNAUTHORIZED);
+            throw new AuthException(ErrorMessages.ERROR_REFRESH_TOKEN_REVOKED, HttpStatus.UNAUTHORIZED);
         }
 
         if (stored.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new AuthException("Refresh token has expired.", HttpStatus.UNAUTHORIZED);
+            throw new AuthException(ErrorMessages.ERROR_REFRESH_TOKEN_EXPIRED, HttpStatus.UNAUTHORIZED);
         }
 
         // Token rotation: revoke the used token and issue a new one
@@ -104,7 +106,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(readOnly = true)
     public User getCurrentUser(String email) {
         return userRepository.findByEmail(email.toLowerCase().trim())
-            .orElseThrow(() -> new AuthException("User not found.", HttpStatus.UNAUTHORIZED));
+            .orElseThrow(() -> new AuthException(ErrorMessages.ERROR_USER_NOT_FOUND, HttpStatus.UNAUTHORIZED));
     }
 
     private AuthResponseDto buildAuthResponse(User user) {
@@ -127,7 +129,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private String extractNameFromEmail(String email) {
-        int atIndex = email.indexOf('@');
+        int atIndex = email.indexOf(AuthConstants.EMAIL_SEPARATOR);
         return atIndex > 0 ? email.substring(0, atIndex) : email;
     }
 }

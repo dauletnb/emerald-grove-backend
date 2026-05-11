@@ -1,9 +1,12 @@
 package com.emeraldgrove.service;
 
 import com.emeraldgrove.dto.CollectionDto;
+import com.emeraldgrove.dto.CollectionLinkBatchSyncResponseDto;
+import com.emeraldgrove.dto.CollectionLinkDeletionDto;
 import com.emeraldgrove.dto.CollectionLinkSyncDto;
 import com.emeraldgrove.dto.CollectionRequestDto;
 import com.emeraldgrove.dto.CollectionSyncDto;
+import com.emeraldgrove.dto.SyncBatchResponseDto;
 
 import java.util.List;
 
@@ -26,7 +29,11 @@ public interface CollectionService {
 
     List<String> getArticleCollectionIds(String articleExternalId, Long userId);
 
-    void syncCollections(List<CollectionSyncDto> collections, Long userId);
+    SyncBatchResponseDto syncCollections(List<CollectionSyncDto> collections, Long userId);
 
-    void syncCollectionLinks(List<CollectionLinkSyncDto> links, Long userId);
+    CollectionLinkBatchSyncResponseDto syncCollectionLinks(List<CollectionLinkSyncDto> links, Long userId);
+
+    SyncBatchResponseDto syncDeletedCollections(List<String> externalIds, Long userId);
+
+    CollectionLinkBatchSyncResponseDto syncDeletedCollectionLinks(List<CollectionLinkDeletionDto> links, Long userId);
 }

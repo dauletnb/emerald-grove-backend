@@ -1,7 +1,9 @@
 package com.emeraldgrove.service;
 
 import com.emeraldgrove.dto.ArticleAiResponseDto;
+import com.emeraldgrove.dto.ArticleDeletionSyncRequestDto;
 import com.emeraldgrove.dto.ArticleSyncDto;
+import com.emeraldgrove.dto.SyncBatchResponseDto;
 import com.emeraldgrove.dto.SyncArticleRequestDto;
 import com.emeraldgrove.dto.SyncArticleResponseDto;
 import com.emeraldgrove.entity.User;
@@ -16,6 +18,8 @@ public interface ArticleService {
     void deleteNote(String articleExternalId, String noteExternalId, Long userId);
 
     void deleteArticle(String externalId, Long userId);
+
+    SyncBatchResponseDto syncDeletedArticles(ArticleDeletionSyncRequestDto request, Long userId);
 
     ArticleAiResponseDto getAiResult(String externalId, Long userId);
 

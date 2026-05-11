@@ -1,5 +1,6 @@
 package com.emeraldgrove.service;
 
+import com.emeraldgrove.dto.CollectionLinkDeletionDto;
 import com.emeraldgrove.dto.CollectionLinkSyncDto;
 import com.emeraldgrove.dto.CollectionRequestDto;
 import com.emeraldgrove.dto.CollectionSyncDto;
@@ -93,13 +94,14 @@ class CollectionServiceImplTest {
     void syncCollectionsCreatesMissingCollection() {
         when(collectionRepository.findByExternalIdAndUserId("collection-1", 1L)).thenReturn(Optional.empty());
 
-        collectionService.syncCollections(List.of(new CollectionSyncDto("collection-1", "Saved")), 1L);
+        var result = collectionService.syncCollections(List.of(new CollectionSyncDto("collection-1", "Saved")), 1L);
 
         ArgumentCaptor<ArticleCollection> captor = ArgumentCaptor.forClass(ArticleCollection.class);
         verify(collectionRepository).save(captor.capture());
         assertThat(captor.getValue().getExternalId()).isEqualTo("collection-1");
         assertThat(captor.getValue().getName()).isEqualTo("Saved");
         assertThat(captor.getValue().getUser().getId()).isEqualTo(1L);
+        assertThat(result.appliedCount()).isEqualTo(1);
     }
 
     @Test
@@ -113,22 +115,27 @@ class CollectionServiceImplTest {
 
         when(collectionRepository.findByExternalIdAndUserId("collection-1", 1L)).thenReturn(Optional.of(existing));
 
-        collectionService.syncCollections(List.of(new CollectionSyncDto("collection-1", "New")), 1L);
+        var result = collectionService.syncCollections(List.of(new CollectionSyncDto("collection-1", "New")), 1L);
 
         verify(collectionRepository).save(existing);
         assertThat(existing.getName()).isEqualTo("New");
+        assertThat(result.appliedCount()).isEqualTo(1);
     }
 
     @Test
     void syncCollectionLinksSkipsMissingArticleOrCollection() {
         when(articleRepository.findByExternalIdAndUserId("article-1", 1L)).thenReturn(Optional.empty());
 
-        collectionService.syncCollectionLinks(
+        var result = collectionService.syncCollectionLinks(
             List.of(new CollectionLinkSyncDto("link-1", "article-1", "collection-1", 1712160000000L)),
             1L
         );
 
         verify(linkRepository, never()).save(any(ArticleCollectionLink.class));
+        assertThat(result.skippedCount()).isEqualTo(1);
+        assertThat(result.skipped()).singleElement().satisfies(item ->
+            assertThat(item.reason()).isEqualTo("ARTICLE_NOT_FOUND")
+        );
     }
 
     @Test
@@ -152,7 +159,7 @@ class CollectionServiceImplTest {
         when(linkRepository.findByArticleExternalIdAndCollectionExternalId("article-1", "collection-1"))
             .thenReturn(Optional.empty());
 
-        collectionService.syncCollectionLinks(
+        var result = collectionService.syncCollectionLinks(
             List.of(new CollectionLinkSyncDto("link-1", "article-1", "collection-1", 1712160000000L)),
             1L
         );
@@ -163,6 +170,64 @@ class CollectionServiceImplTest {
         assertThat(captor.getValue().getArticle()).isEqualTo(article);
         assertThat(captor.getValue().getCollection()).isEqualTo(collection);
         assertThat(captor.getValue().getClientCreatedAt()).isNotNull();
+        assertThat(result.appliedCount()).isEqualTo(1);
+    }
+
+    @Test
+    void syncDeletedCollectionsIsIdempotent() {
+        ArticleCollection collection = ArticleCollection.builder()
+            .id(8L)
+            .externalId("collection-1")
+            .user(User.builder().id(1L).build())
+            .name("Collection")
+            .build();
+
+        when(collectionRepository.findByExternalIdAndUserId("collection-1", 1L)).thenReturn(Optional.of(collection));
+        when(collectionRepository.findByExternalIdAndUserId("collection-2", 1L)).thenReturn(Optional.empty());
+
+        var result = collectionService.syncDeletedCollections(List.of("collection-1", "collection-2"), 1L);
+
+        verify(collectionRepository).delete(collection);
+        assertThat(result.appliedCount()).isEqualTo(1);
+        assertThat(result.skippedCount()).isEqualTo(1);
+    }
+
+    @Test
+    void syncDeletedCollectionLinksIsIdempotent() {
+        User user = User.builder().id(1L).build();
+        Article article = Article.builder()
+            .id(5L)
+            .externalId("article-1")
+            .user(user)
+            .title("Title")
+            .url("https://example.com")
+            .build();
+        ArticleCollection collection = ArticleCollection.builder()
+            .id(8L)
+            .externalId("collection-1")
+            .user(user)
+            .name("Collection")
+            .build();
+        ArticleCollectionLink link = ArticleCollectionLink.builder()
+            .id(13L)
+            .externalId("link-1")
+            .article(article)
+            .collection(collection)
+            .build();
+
+        when(linkRepository.findByArticleExternalIdAndCollectionExternalId("article-1", "collection-1"))
+            .thenReturn(Optional.of(link));
+        when(linkRepository.findByArticleExternalIdAndCollectionExternalId("article-2", "collection-2"))
+            .thenReturn(Optional.empty());
+
+        var result = collectionService.syncDeletedCollectionLinks(List.of(
+            new CollectionLinkDeletionDto("link-1", "article-1", "collection-1"),
+            new CollectionLinkDeletionDto("link-2", "article-2", "collection-2")
+        ), 1L);
+
+        verify(linkRepository).delete(link);
+        assertThat(result.appliedCount()).isEqualTo(1);
+        assertThat(result.skippedCount()).isEqualTo(1);
     }
 
     @Test

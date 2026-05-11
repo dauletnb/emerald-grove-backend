@@ -1,5 +1,6 @@
 package com.emeraldgrove.service;
 
+import com.emeraldgrove.dto.ArticleDeletionSyncRequestDto;
 import com.emeraldgrove.dto.ArticleSyncDto;
 import com.emeraldgrove.dto.SyncArticleRequestDto;
 import com.emeraldgrove.dto.SyncArticleResponseDto;
@@ -8,6 +9,7 @@ import com.emeraldgrove.entity.Article;
 import com.emeraldgrove.entity.User;
 import com.emeraldgrove.enums.SyncStatus;
 import com.emeraldgrove.repository.AiJobRepository;
+import com.emeraldgrove.repository.AiResultRepository;
 import com.emeraldgrove.repository.ArticleRepository;
 import com.emeraldgrove.security.XssSanitizer;
 import com.emeraldgrove.service.impl.ArticleServiceImpl;
@@ -138,5 +140,29 @@ class ArticleServiceImplTest {
             assertThat(item.isFavorite()).isTrue();
             assertThat(item.isReadLater()).isFalse();
         });
+    }
+
+    @Test
+    void syncDeletedArticlesIsIdempotent() {
+        Article article = Article.builder()
+            .id(42L)
+            .externalId("article-1")
+            .user(User.builder().id(1L).build())
+            .title("Interesting article")
+            .url("https://example.com/article")
+            .description("Short description")
+            .build();
+
+        when(articleRepository.findByExternalIdAndUserId("article-1", 1L)).thenReturn(Optional.of(article));
+        when(articleRepository.findByExternalIdAndUserId("article-2", 1L)).thenReturn(Optional.empty());
+
+        var result = articleService.syncDeletedArticles(new ArticleDeletionSyncRequestDto(List.of("article-1", "article-2")), 1L);
+
+        verify(articleRepository).delete(article);
+        assertThat(result.appliedCount()).isEqualTo(1);
+        assertThat(result.skippedCount()).isEqualTo(1);
+        assertThat(result.skipped()).singleElement().satisfies(item ->
+            assertThat(item.reason()).isEqualTo("ARTICLE_NOT_FOUND")
+        );
     }
 }

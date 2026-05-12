@@ -11,7 +11,7 @@ public interface ArticleCollectionRepository extends JpaRepository<ArticleCollec
     Optional<ArticleCollection> findByExternalIdAndUserId(String externalId, Long userId);
 
     @EntityGraph(attributePaths = "articleLinks")
-    Optional<ArticleCollection> findByExternalIdAndUserIdWithLinks(String externalId, Long userId);
+    Optional<ArticleCollection> findWithArticleLinksByExternalIdAndUserId(String externalId, Long userId);
 
     List<ArticleCollection> findAllByUserIdOrderByUpdatedAtDesc(Long userId);
 

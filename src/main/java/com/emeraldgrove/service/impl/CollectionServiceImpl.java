@@ -36,18 +36,26 @@ import com.emeraldgrove.repository.UserRepository;
 import com.emeraldgrove.service.CollectionService;
 
 import jakarta.persistence.EntityNotFoundException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class CollectionServiceImpl implements CollectionService {
-    
+
     private final ArticleCollectionRepository collectionRepository;
     private final ArticleCollectionLinkRepository linkRepository;
     private final ArticleRepository articleRepository;
     private final UserRepository userRepository;
+
+    public CollectionServiceImpl(ArticleCollectionRepository collectionRepository,
+                                   ArticleCollectionLinkRepository linkRepository,
+                                   ArticleRepository articleRepository,
+                                   UserRepository userRepository) {
+        this.collectionRepository = collectionRepository;
+        this.linkRepository = linkRepository;
+        this.articleRepository = articleRepository;
+        this.userRepository = userRepository;
+    }
 
     @Override
     @Transactional
@@ -323,7 +331,7 @@ public class CollectionServiceImpl implements CollectionService {
     }
 
     private ArticleCollection getOwnedCollectionWithLinks(String externalId, Long userId) {
-        return collectionRepository.findByExternalIdAndUserIdWithLinks(externalId, userId)
+        return collectionRepository.findWithArticleLinksByExternalIdAndUserId(externalId, userId)
             .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_COLLECTION_NOT_FOUND.formatted(externalId)));
     }
 

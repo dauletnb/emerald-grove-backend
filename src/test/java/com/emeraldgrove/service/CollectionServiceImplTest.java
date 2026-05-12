@@ -11,6 +11,7 @@ import com.emeraldgrove.entity.User;
 import com.emeraldgrove.repository.ArticleCollectionLinkRepository;
 import com.emeraldgrove.repository.ArticleCollectionRepository;
 import com.emeraldgrove.repository.ArticleRepository;
+import com.emeraldgrove.repository.UserRepository;
 import com.emeraldgrove.service.impl.CollectionServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,6 +42,9 @@ class CollectionServiceImplTest {
     @Mock
     private ArticleRepository articleRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
     @InjectMocks
     private CollectionServiceImpl collectionService;
 
@@ -53,6 +57,7 @@ class CollectionServiceImplTest {
             .name("My collection")
             .build();
 
+        when(userRepository.getReferenceById(1L)).thenReturn(User.builder().id(1L).build());
         when(collectionRepository.save(any(ArticleCollection.class))).thenReturn(persisted);
 
         var result = collectionService.createCollection(new CollectionRequestDto("  My collection  "), 1L);
@@ -92,15 +97,17 @@ class CollectionServiceImplTest {
 
     @Test
     void syncCollectionsCreatesMissingCollection() {
-        when(collectionRepository.findByExternalIdAndUserId("collection-1", 1L)).thenReturn(Optional.empty());
+        when(userRepository.getReferenceById(1L)).thenReturn(User.builder().id(1L).build());
+        when(collectionRepository.findAllByExternalIdInAndUserId(List.of("collection-1"), 1L)).thenReturn(List.of());
 
         var result = collectionService.syncCollections(List.of(new CollectionSyncDto("collection-1", "Saved")), 1L);
 
-        ArgumentCaptor<ArticleCollection> captor = ArgumentCaptor.forClass(ArticleCollection.class);
-        verify(collectionRepository).save(captor.capture());
-        assertThat(captor.getValue().getExternalId()).isEqualTo("collection-1");
-        assertThat(captor.getValue().getName()).isEqualTo("Saved");
-        assertThat(captor.getValue().getUser().getId()).isEqualTo(1L);
+        ArgumentCaptor<List<ArticleCollection>> captor = ArgumentCaptor.forClass(List.class);
+        verify(collectionRepository).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(1);
+        assertThat(captor.getValue().get(0).getExternalId()).isEqualTo("collection-1");
+        assertThat(captor.getValue().get(0).getName()).isEqualTo("Saved");
+        assertThat(captor.getValue().get(0).getUser().getId()).isEqualTo(1L);
         assertThat(result.appliedCount()).isEqualTo(1);
     }
 
@@ -113,11 +120,11 @@ class CollectionServiceImplTest {
             .name("Old")
             .build();
 
-        when(collectionRepository.findByExternalIdAndUserId("collection-1", 1L)).thenReturn(Optional.of(existing));
+        when(collectionRepository.findAllByExternalIdInAndUserId(List.of("collection-1"), 1L)).thenReturn(List.of(existing));
 
         var result = collectionService.syncCollections(List.of(new CollectionSyncDto("collection-1", "New")), 1L);
 
-        verify(collectionRepository).save(existing);
+        verify(collectionRepository, never()).saveAll(any());
         assertThat(existing.getName()).isEqualTo("New");
         assertThat(result.appliedCount()).isEqualTo(1);
     }

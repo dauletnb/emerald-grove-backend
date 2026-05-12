@@ -1,13 +1,8 @@
 package com.emeraldgrove.controller;
 
 import com.emeraldgrove.dto.CollectionDto;
-import com.emeraldgrove.dto.CollectionLinkBatchSyncResponseDto;
-import com.emeraldgrove.dto.CollectionLinkDeletionDto;
-import com.emeraldgrove.dto.CollectionLinkSyncDto;
 import com.emeraldgrove.dto.CollectionRequestDto;
 import com.emeraldgrove.dto.CollectionSyncDto;
-import com.emeraldgrove.dto.ExternalIdDeletionRequestDto;
-import com.emeraldgrove.dto.SyncBatchResponseDto;
 import com.emeraldgrove.util.ControllerUtil;
 import com.emeraldgrove.service.CollectionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,7 +25,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/collections")
 @RequiredArgsConstructor
-@Tag(name = "Collections", description = "API для управления пользовательскими коллекциями")
+@Tag(name = "Collections", description = "API для управления пользовательскими коллекциями и их связями со статьями")
 public class CollectionController {
     private final CollectionService collectionService;
     private final ControllerUtil controllerUtil;
@@ -96,29 +91,4 @@ public class CollectionController {
         return ResponseEntity.ok(collectionService.getCollectionArticleIds(externalId, controllerUtil.getCurrentUser().getId()));
     }
 
-    @Operation(summary = "Синхронизировать коллекции")
-    @PostMapping("/sync")
-    public ResponseEntity<SyncBatchResponseDto> syncCollections(@RequestBody List<@Valid CollectionSyncDto> collections) {
-        return ResponseEntity.ok(collectionService.syncCollections(collections, controllerUtil.getCurrentUser().getId()));
-    }
-
-    @Operation(summary = "Синхронизировать связи статей с коллекциями")
-    @PostMapping("/links/sync")
-    public ResponseEntity<CollectionLinkBatchSyncResponseDto> syncCollectionLinks(@RequestBody List<@Valid CollectionLinkSyncDto> links) {
-        return ResponseEntity.ok(collectionService.syncCollectionLinks(links, controllerUtil.getCurrentUser().getId()));
-    }
-
-    @Operation(summary = "Синхронизировать удаленные коллекции")
-    @PostMapping("/sync/deletions")
-    public ResponseEntity<SyncBatchResponseDto> syncDeletedCollections(@Valid @RequestBody ExternalIdDeletionRequestDto request) {
-        return ResponseEntity.ok(collectionService.syncDeletedCollections(request.externalIds(), controllerUtil.getCurrentUser().getId()));
-    }
-
-    @Operation(summary = "Синхронизировать удаленные связи статей с коллекциями")
-    @PostMapping("/links/sync/deletions")
-    public ResponseEntity<CollectionLinkBatchSyncResponseDto> syncDeletedCollectionLinks(
-        @RequestBody List<@Valid CollectionLinkDeletionDto> links
-    ) {
-        return ResponseEntity.ok(collectionService.syncDeletedCollectionLinks(links, controllerUtil.getCurrentUser().getId()));
-    }
 }

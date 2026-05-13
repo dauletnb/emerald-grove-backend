@@ -1,5 +1,6 @@
 package com.emeraldgrove.service.impl;
 
+import org.jsoup.Jsoup;
 import org.springframework.stereotype.Service;
 
 import com.emeraldgrove.constants.AiConstants;
@@ -10,6 +11,7 @@ import com.emeraldgrove.entity.AiJob;
 import com.emeraldgrove.entity.AiResult;
 import com.emeraldgrove.entity.Article;
 import com.emeraldgrove.repository.AiResultRepository;
+import com.emeraldgrove.repository.ArticleRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ public class AiOrchestrator {
 
     private final GroqArticleSummaryServiceImpl groqService;
     private final AiResultRepository aiResultRepository;
+    private final ArticleRepository articleRepository;
     private final ObjectMapper objectMapper;
 
     public void processJob(AiJob job) {
@@ -34,19 +37,32 @@ public class AiOrchestrator {
     private void processFull(AiJob job) {
         Article article = job.getArticle();
 
-        String content = article.getDescription();
-        if (content != null && content.length() > AiConstants.MAX_CONTENT_LENGTH) {
-            content = content.substring(0, AiConstants.MAX_CONTENT_LENGTH);
-        }
+        String rawText = article.getContent() != null && !article.getContent().isBlank()
+            ? article.getContent()
+            : article.getDescription();
+
+        String plainText = rawText != null ? Jsoup.parse(rawText).text() : "";
+
+        String truncatedText = plainText.length() > AiConstants.MAX_CONTENT_LENGTH
+            ? plainText.substring(0, AiConstants.MAX_CONTENT_LENGTH)
+            : plainText;
 
         AiResponseDto aiResponseDto;
         try {
-            aiResponseDto = groqService.analyzeArticle(article.getTitle(), content);
+            aiResponseDto = groqService.analyzeArticle(article.getTitle(), truncatedText);
         } catch (Exception e) {
             throw new RuntimeException(ErrorMessages.ERROR_GROQ_ANALYSIS_FAILED.formatted(e.getMessage()), e);
         }
 
         AiResultDto result = validate(aiResponseDto.json());
+
+        if (result.summary != null
+                && result.summary.shortText != null
+                && !result.summary.shortText.isBlank()) {
+            article.setDescription(result.summary.shortText);
+            articleRepository.save(article);
+            log.info("AI short summary saved to article.description, articleId={}", article.getId());
+        }
 
         String contentJson;
         try {

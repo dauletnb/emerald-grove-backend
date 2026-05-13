@@ -75,6 +75,7 @@ public class ArticleServiceImpl implements ArticleService {
                 .url(request.url())
                 .title(sanitizeText(request.title()))
                 .description(sanitizeText(request.description()))
+                .content(request.content())
                 .isFavorite(request.isFavorite())
                 .isReadLater(request.isReadLater())
                 .build();
@@ -198,6 +199,7 @@ public class ArticleServiceImpl implements ArticleService {
         article.setTitle(sanitizeText(request.title()));
         article.setUrl(request.url());
         article.setDescription(sanitizeText(request.description()));
+        article.setContent(request.content());
         article.setFavorite(request.isFavorite());
         article.setReadLater(request.isReadLater());
     }
@@ -270,6 +272,7 @@ public class ArticleServiceImpl implements ArticleService {
             article.getUrl(),
             article.getTitle(),
             article.getDescription(),
+            article.getContent(),
             article.isFavorite(),
             article.isReadLater(),
             toEpochMillis(article.getCreatedAt()),

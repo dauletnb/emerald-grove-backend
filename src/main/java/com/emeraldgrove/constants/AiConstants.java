@@ -6,7 +6,7 @@ public final class AiConstants {
     }
     
     // Content processing
-    public static final int MAX_CONTENT_LENGTH = 8000;
+    public static final int MAX_CONTENT_LENGTH = 8_000;
     
     // Worker scheduling
     public static final int SCHEDULED_DELAY_MS = 3000;

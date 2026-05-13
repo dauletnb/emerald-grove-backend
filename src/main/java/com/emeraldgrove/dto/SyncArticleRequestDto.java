@@ -17,6 +17,7 @@ public record SyncArticleRequestDto(
     String title,
     @Size(max = 5000)
     String description,
+    String content,
     boolean isFavorite,
     boolean isReadLater,
     @Valid List<SyncArticleNoteRequestDto> notes

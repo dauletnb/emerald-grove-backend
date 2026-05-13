@@ -19,6 +19,8 @@ public record SyncArticlePayloadResponseDto(
     String title,
     @Schema(description = "Article description", example = "Short description")
     String description,
+    @Schema(description = "Full article content (HTML from Readability)")
+    String content,
     @Schema(description = "Whether the article is marked as favorite", example = "true")
     boolean isFavorite,
     @Schema(description = "Whether the article is marked to read later", example = "false")
@@ -39,6 +41,7 @@ public record SyncArticlePayloadResponseDto(
             article.getUrl(),
             article.getTitle(),
             article.getDescription(),
+            article.getContent(),
             article.isFavorite(),
             article.isReadLater(),
             toEpochMillis(article.getCreatedAt()),

@@ -59,6 +59,7 @@ class ArticleControllerTest {
                 "https://example.com/article",
                 "Interesting article",
                 "Short description",
+                null,   // content
                 true,
                 false,
                 1712160000000L,

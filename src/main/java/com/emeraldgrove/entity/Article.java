@@ -50,6 +50,9 @@ public class Article extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "content", columnDefinition = "TEXT")
+    private String content;
+
     @Builder.Default
     @Column(name = "is_favorite", nullable = false)
     private boolean isFavorite = false;

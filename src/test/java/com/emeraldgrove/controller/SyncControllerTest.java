@@ -70,6 +70,7 @@ class SyncControllerTest {
             "https://example.com/article",
             "Interesting article",
             "Short description",
+            null,   // content
             true,
             false,
             List.of()
@@ -85,6 +86,7 @@ class SyncControllerTest {
                     "https://example.com/article",
                     "Interesting article",
                     "Short description",
+                    null,   // content
                     true,
                     false,
                     1712160000000L,
@@ -99,6 +101,54 @@ class SyncControllerTest {
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.article.isFavorite").value(true))
+            .andExpect(jsonPath("$.article.isReadLater").value(false));
+    }
+
+    @Test
+    void syncArticleWithContentReturnsContentInPayload() throws Exception {
+        String htmlContent = "<html><body><h1>Full article HTML</h1><p>Paragraph text.</p></body></html>";
+
+        SyncArticleRequestDto request = new SyncArticleRequestDto(
+            "test-uuid-001",
+            "https://example.com/article-with-content",
+            "Test Article With Content",
+            "Short description",
+            htmlContent,
+            false,
+            false,
+            List.of()
+        );
+
+        when(articleService.syncArticle(any(SyncArticleRequestDto.class), any(User.class)))
+            .thenReturn(new SyncArticleResponseDto(
+                SyncStatus.CREATED,
+                1L,
+                new SyncArticlePayloadResponseDto(
+                    1L,
+                    "test-uuid-001",
+                    "https://example.com/article-with-content",
+                    "Test Article With Content",
+                    "Short description",
+                    htmlContent,
+                    false,
+                    false,
+                    1712160000000L,
+                    1712160005000L,
+                    "PENDING",
+                    List.of()
+                )
+            ));
+
+        mockMvc.perform(post("/api/sync/articles")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.status").value("CREATED"))
+            .andExpect(jsonPath("$.articleId").value(1))
+            .andExpect(jsonPath("$.article.externalId").value("test-uuid-001"))
+            .andExpect(jsonPath("$.article.title").value("Test Article With Content"))
+            .andExpect(jsonPath("$.article.content").value(htmlContent))
+            .andExpect(jsonPath("$.article.isFavorite").value(false))
             .andExpect(jsonPath("$.article.isReadLater").value(false));
     }
 

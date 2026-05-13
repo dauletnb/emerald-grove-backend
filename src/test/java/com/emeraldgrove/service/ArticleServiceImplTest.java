@@ -50,6 +50,7 @@ class ArticleServiceImplTest {
             "https://example.com/article",
             "Interesting article",
             "Short description",
+            null,   // content
             true,
             false,
             List.of()
@@ -97,6 +98,7 @@ class ArticleServiceImplTest {
             "https://example.com/article",
             "New title",
             "New description",
+            null,   // content
             true,
             false,
             List.of()

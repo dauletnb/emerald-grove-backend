@@ -23,7 +23,7 @@ public class AiController {
     private final ControllerUtil controllerUtil;
 
     @Operation(summary = "Получить результат анализа статьи")
-    @GetMapping("/articles/{externalId}")
+    @GetMapping(value = {"/articles/{externalId}", "/articles/{externalId}/ai"})
     public ResponseEntity<ArticleAiResponseDto> getAiResult(@PathVariable String externalId) {
         return ResponseEntity.ok(articleService.getAiResult(externalId, controllerUtil.getCurrentUser().getId()));
     }

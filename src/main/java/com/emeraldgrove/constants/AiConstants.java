@@ -10,6 +10,7 @@ public final class AiConstants {
     
     // Worker scheduling
     public static final int SCHEDULED_DELAY_MS = 3000;
+    public static final int SCHEDULED_INITIAL_DELAY_MS = 5000;
     public static final int MAX_RETRIES = 3;
     
     // JSON validation

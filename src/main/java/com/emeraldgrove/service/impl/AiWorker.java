@@ -19,7 +19,7 @@ public class AiWorker {
     private final AiJobRepository aiJobRepository;
     private final AiOrchestrator orchestrator;
 
-    @Scheduled(fixedDelay = AiConstants.SCHEDULED_DELAY_MS)
+    @Scheduled(fixedDelay = AiConstants.SCHEDULED_DELAY_MS, initialDelay = AiConstants.SCHEDULED_INITIAL_DELAY_MS)
     @Transactional(noRollbackFor = Exception.class)
     public void processQueue() {
         List<AiJob> jobs = aiJobRepository.findTop10ByStatus(AiStatusConstants.AI_STATUS_PENDING);

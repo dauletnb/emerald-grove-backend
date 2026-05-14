@@ -131,6 +131,16 @@ public class GroqArticleSummaryServiceImpl implements ArticleSummaryService {
     }
 
     public AiResponseDto analyzeArticle(String title, String description) throws IOException, InterruptedException {
+        if (!groqEnabled) {
+            log.info("Groq analysis skipped: emerald-grove.ai.groq.enabled=false");
+            throw new IllegalStateException("Groq AI is disabled");
+        }
+
+        if (groqApiKey.isBlank()) {
+            log.warn("Groq analysis skipped: GROQ_API_KEY is empty or unavailable in the backend process");
+            throw new IllegalStateException("GROQ_API_KEY is not configured");
+        }
+
         log.info("Groq full analysis request started: model={}, contentLength={}", groqModel, description.length());
         AiResponseDto result = requestAnalysis(title, description);
         log.info("Groq full analysis request succeeded: responseLength={}, tokens={}", result.json().length(), result.tokens());

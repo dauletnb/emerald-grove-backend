@@ -1,4 +1,4 @@
-package com.emeraldgrove.dto;
+package com.emeraldgrove.dto.article;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;

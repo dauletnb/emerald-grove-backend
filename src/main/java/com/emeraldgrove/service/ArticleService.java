@@ -1,11 +1,10 @@
 package com.emeraldgrove.service;
 
-import com.emeraldgrove.dto.ArticleAiResponseDto;
-import com.emeraldgrove.dto.ArticleDeletionSyncRequestDto;
-import com.emeraldgrove.dto.ArticleSyncDto;
-import com.emeraldgrove.dto.SyncBatchResponseDto;
-import com.emeraldgrove.dto.SyncArticleRequestDto;
-import com.emeraldgrove.dto.SyncArticleResponseDto;
+import com.emeraldgrove.dto.article.ArticleDeletionSyncRequestDto;
+import com.emeraldgrove.dto.article.ArticleSyncDto;
+import com.emeraldgrove.dto.sync.SyncBatchResponseDto;
+import com.emeraldgrove.dto.sync.SyncArticleRequestDto;
+import com.emeraldgrove.dto.sync.SyncArticleResponseDto;
 import com.emeraldgrove.entity.User;
 
 import java.util.List;
@@ -13,15 +12,13 @@ import java.util.List;
 public interface ArticleService {
     SyncArticleResponseDto syncArticle(SyncArticleRequestDto request, User user);
 
+    SyncBatchResponseDto syncDeletedArticles(ArticleDeletionSyncRequestDto request, Long userId);
+
     List<ArticleSyncDto> getAll(Long userId);
 
     void deleteNote(String articleExternalId, String noteExternalId, Long userId);
 
     void deleteArticle(String externalId, Long userId);
 
-    SyncBatchResponseDto syncDeletedArticles(ArticleDeletionSyncRequestDto request, Long userId);
-
-    ArticleAiResponseDto getAiResult(String externalId, Long userId);
-
-    void retryAiAnalysis(String externalId, Long userId);
+    List<String> getArticleCollectionIds(String articleExternalId, Long userId);
 }

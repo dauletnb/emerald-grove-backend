@@ -1,8 +1,8 @@
 package com.emeraldgrove.service.impl;
 
-import com.emeraldgrove.dto.AuthResponseDto;
-import com.emeraldgrove.dto.LoginRequestDto;
-import com.emeraldgrove.dto.RegisterRequestDto;
+import com.emeraldgrove.dto.auth.AuthResponseDto;
+import com.emeraldgrove.dto.auth.LoginRequestDto;
+import com.emeraldgrove.dto.auth.RegisterRequestDto;
 import com.emeraldgrove.entity.RefreshToken;
 import com.emeraldgrove.entity.User;
 import com.emeraldgrove.exception.AuthException;

@@ -1,9 +1,12 @@
-package com.emeraldgrove.dto;
+package com.emeraldgrove.dto.collection;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public record CollectionRequestDto(
+public record CollectionSyncDto(
+    @NotBlank
+    @Size(max = 36)
+    String externalId,
     @NotBlank
     @Size(max = 255)
     String name

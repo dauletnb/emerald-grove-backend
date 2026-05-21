@@ -4,7 +4,6 @@ import com.emeraldgrove.entity.User;
 import com.emeraldgrove.exception.GlobalExceptionHandler;
 import com.emeraldgrove.util.ControllerUtil;
 import com.emeraldgrove.service.ArticleService;
-import com.emeraldgrove.service.CollectionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,9 +26,6 @@ class ArticleControllerCollectionEndpointTest {
     private ArticleService articleService;
 
     @Mock
-    private CollectionService collectionService;
-
-    @Mock
     private ControllerUtil controllerUtil;
 
     private MockMvc mockMvc;
@@ -37,7 +33,7 @@ class ArticleControllerCollectionEndpointTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders
-            .standaloneSetup(new ArticleController(articleService, collectionService, controllerUtil))
+            .standaloneSetup(new ArticleController(articleService, controllerUtil))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
 
@@ -46,7 +42,7 @@ class ArticleControllerCollectionEndpointTest {
 
     @Test
     void getArticleCollectionIdsReturnsList() throws Exception {
-        when(collectionService.getArticleCollectionIds("article-1", 1L)).thenReturn(List.of("collection-1", "collection-2"));
+        when(articleService.getArticleCollectionIds("article-1", 1L)).thenReturn(List.of("collection-1", "collection-2"));
 
         mockMvc.perform(get("/api/articles/article-1/collections"))
             .andExpect(status().isOk())

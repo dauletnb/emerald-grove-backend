@@ -1,4 +1,4 @@
-package com.emeraldgrove.dto;
+package com.emeraldgrove.dto.sync;
 
 import com.emeraldgrove.enums.NoteType;
 import io.swagger.v3.oas.annotations.media.Schema;

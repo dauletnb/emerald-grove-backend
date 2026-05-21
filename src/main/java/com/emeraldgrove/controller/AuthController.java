@@ -1,10 +1,10 @@
 package com.emeraldgrove.controller;
 
-import com.emeraldgrove.dto.AuthResponseDto;
-import com.emeraldgrove.dto.LoginRequestDto;
-import com.emeraldgrove.dto.RefreshTokenRequestDto;
-import com.emeraldgrove.dto.RegisterRequestDto;
-import com.emeraldgrove.dto.UserDto;
+import com.emeraldgrove.dto.auth.AuthResponseDto;
+import com.emeraldgrove.dto.auth.LoginRequestDto;
+import com.emeraldgrove.dto.auth.RefreshTokenRequestDto;
+import com.emeraldgrove.dto.auth.RegisterRequestDto;
+import com.emeraldgrove.dto.auth.UserDto;
 import com.emeraldgrove.entity.User;
 import com.emeraldgrove.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;

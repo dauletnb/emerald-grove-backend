@@ -1,7 +1,7 @@
 package com.emeraldgrove.controller;
 
-import com.emeraldgrove.dto.ArticleAiResponseDto;
-import com.emeraldgrove.service.ArticleService;
+import com.emeraldgrove.dto.ai.AiAnalysisResultResponseDton;
+import com.emeraldgrove.service.AiService;
 import com.emeraldgrove.util.ControllerUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,20 +18,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Tag(name = "AI", description = "API для управления AI-аналитикой статей")
 public class AiController {
-
-    private final ArticleService articleService;
+    private final AiService aiService;
     private final ControllerUtil controllerUtil;
 
     @Operation(summary = "Получить результат анализа статьи")
     @GetMapping(value = {"/articles/{externalId}", "/articles/{externalId}/ai"})
-    public ResponseEntity<ArticleAiResponseDto> getAiResult(@PathVariable String externalId) {
-        return ResponseEntity.ok(articleService.getAiResult(externalId, controllerUtil.getCurrentUser().getId()));
+    public ResponseEntity<AiAnalysisResultResponseDton> getAiResult(@PathVariable String externalId) {
+        return ResponseEntity.ok(aiService.getAiResult(externalId, controllerUtil.getCurrentUser().getId()));
     }
 
     @Operation(summary = "Повторить анализ статьи")
     @PostMapping("/articles/{externalId}/retry")
     public ResponseEntity<Void> retryAiAnalysis(@PathVariable String externalId) {
-        articleService.retryAiAnalysis(externalId, controllerUtil.getCurrentUser().getId());
+        aiService.retryAiAnalysis(externalId, controllerUtil.getCurrentUser().getId());
         return ResponseEntity.accepted().build();
     }
 }

@@ -1,4 +1,4 @@
-package com.emeraldgrove.dto;
+package com.emeraldgrove.dto.article;
 
 import com.emeraldgrove.enums.NoteType;
 import jakarta.validation.constraints.NotBlank;

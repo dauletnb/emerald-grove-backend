@@ -1,4 +1,4 @@
-package com.emeraldgrove.dto;
+package com.emeraldgrove.dto.ai;
 
 public record AiResponseDto(String json, int tokens) {
 }

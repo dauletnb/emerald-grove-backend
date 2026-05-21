@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Tag(name = "Notes", description = "API для управления заметками к статьям")
 public class NoteController {
-
     private final ArticleService articleService;
     private final ControllerUtil controllerUtil;
 

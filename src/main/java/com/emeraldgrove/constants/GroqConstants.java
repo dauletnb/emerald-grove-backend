@@ -14,7 +14,7 @@ public final class GroqConstants {
     public static final double TEMPERATURE_SUMMARY = 0.3;
     public static final double TEMPERATURE_ANALYSIS = 0.2;
     public static final int MAX_COMPLETION_TOKENS_SUMMARY = 160;
-    public static final int MAX_COMPLETION_TOKENS_ANALYSIS = 1024;
+    public static final int MAX_COMPLETION_TOKENS_ANALYSIS = 2048;
     public static final double TOP_P = 0.95;
     public static final boolean STREAM = false;
     
@@ -59,12 +59,13 @@ public final class GroqConstants {
 
         Schema:
         {
-          "summary": {"short": "string", "detailed": "string"},
-          "keyPoints": ["string"],
-          "tags": ["string"],
-          "highlights": [{"text": "string", "explanation": "string"}],
-          "metadata": {"readingTime": 0, "complexity": "easy | medium | hard"}
+          "summary": {"short": "string (1-2 sentences)", "detailed": "string (3-5 sentences)"},
+          "keyPoints": ["string", "string", "string"],
+          "highlights": [{"text": "string (exact quote)", "explanation": "string (why it matters)"}]
         }
+
+        Return 3-5 keyPoints and 2-3 highlights maximum.
+        Use the same language as the source text.
 
         Article title: %s
         Article content:

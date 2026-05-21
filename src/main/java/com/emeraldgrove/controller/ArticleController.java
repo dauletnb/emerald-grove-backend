@@ -1,12 +1,11 @@
 package com.emeraldgrove.controller;
 
-import com.emeraldgrove.dto.ArticleDeletionSyncRequestDto;
-import com.emeraldgrove.dto.ArticleSyncDto;
-import com.emeraldgrove.dto.SyncArticleRequestDto;
-import com.emeraldgrove.dto.SyncArticleResponseDto;
-import com.emeraldgrove.dto.SyncBatchResponseDto;
+import com.emeraldgrove.dto.article.ArticleDeletionSyncRequestDto;
+import com.emeraldgrove.dto.article.ArticleSyncDto;
+import com.emeraldgrove.dto.sync.SyncArticleRequestDto;
+import com.emeraldgrove.dto.sync.SyncArticleResponseDto;
+import com.emeraldgrove.dto.sync.SyncBatchResponseDto;
 import com.emeraldgrove.service.ArticleService;
-import com.emeraldgrove.service.CollectionService;
 import com.emeraldgrove.util.ControllerUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,8 +28,20 @@ import java.util.List;
 @Tag(name = "Articles", description = "API для управления статьями и закладками")
 public class ArticleController {
     private final ArticleService articleService;
-    private final CollectionService collectionService;
     private final ControllerUtil controllerUtil;
+
+    @Operation(summary = "Синхронизация статьи")
+    @PostMapping("/sync")
+    public ResponseEntity<SyncArticleResponseDto> syncArticle(@Valid @RequestBody SyncArticleRequestDto request) {
+        SyncArticleResponseDto response = articleService.syncArticle(request, controllerUtil.getCurrentUser());
+        return ResponseEntity.status(response.status().toHttpStatus()).body(response);
+    }
+
+    @Operation(summary = "Синхронизировать удаленные статьи")
+    @PostMapping("/sync/deletions")
+    public ResponseEntity<SyncBatchResponseDto> syncDeletedArticles(@Valid @RequestBody ArticleDeletionSyncRequestDto request) {
+        return ResponseEntity.ok(articleService.syncDeletedArticles(request, controllerUtil.getCurrentUser().getId()));
+    }
 
     @Operation(summary = "Получить все статьи")
     @GetMapping
@@ -48,19 +59,6 @@ public class ArticleController {
     @Operation(summary = "Получить ID коллекций статьи")
     @GetMapping("/{articleExternalId}/collections")
     public ResponseEntity<List<String>> getArticleCollectionIds(@PathVariable String articleExternalId) {
-        return ResponseEntity.ok(collectionService.getArticleCollectionIds(articleExternalId, controllerUtil.getCurrentUser().getId()));
-    }
-
-    @Operation(summary = "Синхронизация статьи")
-    @PostMapping("/sync")
-    public ResponseEntity<SyncArticleResponseDto> syncArticle(@Valid @RequestBody SyncArticleRequestDto request) {
-        SyncArticleResponseDto response = articleService.syncArticle(request, controllerUtil.getCurrentUser());
-        return ResponseEntity.status(response.status().toHttpStatus()).body(response);
-    }
-
-    @Operation(summary = "Синхронизировать удаленные статьи")
-    @PostMapping("/sync/deletions")
-    public ResponseEntity<SyncBatchResponseDto> syncDeletedArticles(@Valid @RequestBody ArticleDeletionSyncRequestDto request) {
-        return ResponseEntity.ok(articleService.syncDeletedArticles(request, controllerUtil.getCurrentUser().getId()));
+        return ResponseEntity.ok(articleService.getArticleCollectionIds(articleExternalId, controllerUtil.getCurrentUser().getId()));
     }
 }

@@ -1,4 +1,4 @@
-package com.emeraldgrove.dto;
+package com.emeraldgrove.dto.auth;
 
 /**
  * Returned after successful login, registration, or token refresh.

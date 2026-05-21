@@ -1,8 +1,8 @@
-package com.emeraldgrove.dto;
+package com.emeraldgrove.dto.ai;
 
 import com.fasterxml.jackson.annotation.JsonRawValue;
 
-public record ArticleAiResponseDto(
+public record AiAnalysisResultResponseDton(
     String aiStatus,
     @JsonRawValue String aiResult
 ) {

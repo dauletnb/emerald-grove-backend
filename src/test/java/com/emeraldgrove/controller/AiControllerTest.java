@@ -1,9 +1,9 @@
 package com.emeraldgrove.controller;
 
-import com.emeraldgrove.dto.ArticleAiResponseDto;
+import com.emeraldgrove.dto.ai.AiAnalysisResultResponseDton;
 import com.emeraldgrove.entity.User;
 import com.emeraldgrove.exception.GlobalExceptionHandler;
-import com.emeraldgrove.service.ArticleService;
+import com.emeraldgrove.service.AiService;
 import com.emeraldgrove.util.ControllerUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AiControllerTest {
 
     @Mock
-    private ArticleService articleService;
+    private AiService aiService;
 
     @Mock
     private ControllerUtil controllerUtil;
@@ -36,7 +36,7 @@ class AiControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders
-            .standaloneSetup(new AiController(articleService, controllerUtil))
+            .standaloneSetup(new AiController(aiService, controllerUtil))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
 
@@ -45,8 +45,8 @@ class AiControllerTest {
 
     @Test
     void getAiResultReturnsAiStatusAndContent() throws Exception {
-        when(articleService.getAiResult(eq("article-1"), eq(1L)))
-            .thenReturn(new ArticleAiResponseDto("COMPLETED", null));
+        when(aiService.getAiResult(eq("article-1"), eq(1L)))
+            .thenReturn(new AiAnalysisResultResponseDton("COMPLETED", null));
 
         mockMvc.perform(get("/api/ai/articles/article-1"))
             .andExpect(status().isOk())
@@ -55,8 +55,8 @@ class AiControllerTest {
 
     @Test
     void getAiResultWithLegacyPathReturnsAiStatusAndContent() throws Exception {
-        when(articleService.getAiResult(eq("article-1"), eq(1L)))
-            .thenReturn(new ArticleAiResponseDto("COMPLETED", null));
+        when(aiService.getAiResult(eq("article-1"), eq(1L)))
+            .thenReturn(new AiAnalysisResultResponseDton("COMPLETED", null));
 
         mockMvc.perform(get("/api/ai/articles/article-1/ai"))
             .andExpect(status().isOk())
@@ -68,6 +68,6 @@ class AiControllerTest {
         mockMvc.perform(post("/api/ai/articles/article-1/retry"))
             .andExpect(status().isAccepted());
 
-        verify(articleService).retryAiAnalysis("article-1", 1L);
+        verify(aiService).retryAiAnalysis("article-1", 1L);
     }
 }

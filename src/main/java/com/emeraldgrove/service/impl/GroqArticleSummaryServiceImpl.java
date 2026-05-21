@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 
 import com.emeraldgrove.constants.ErrorMessages;
 import com.emeraldgrove.constants.GroqConstants;
-import com.emeraldgrove.dto.AiResponseDto;
+import com.emeraldgrove.dto.ai.AiResponseDto;
 import com.emeraldgrove.service.ArticleSummaryService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

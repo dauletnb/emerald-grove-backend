@@ -14,17 +14,16 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.emeraldgrove.dto.ArticleDeletionSyncRequestDto;
-import com.emeraldgrove.dto.ArticleSyncDto;
-import com.emeraldgrove.dto.SyncArticleRequestDto;
-import com.emeraldgrove.dto.SyncArticleResponseDto;
-import com.emeraldgrove.entity.AiJob;
+import com.emeraldgrove.dto.article.ArticleDeletionSyncRequestDto;
+import com.emeraldgrove.dto.article.ArticleSyncDto;
+import com.emeraldgrove.dto.sync.SyncArticleRequestDto;
+import com.emeraldgrove.dto.sync.SyncArticleResponseDto;
 import com.emeraldgrove.entity.Article;
 import com.emeraldgrove.entity.User;
 import com.emeraldgrove.enums.SyncStatus;
-import com.emeraldgrove.repository.AiJobRepository;
 import com.emeraldgrove.repository.ArticleRepository;
 import com.emeraldgrove.security.XssSanitizer;
+import com.emeraldgrove.service.AiService;
 import com.emeraldgrove.service.impl.ArticleServiceImpl;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,7 +33,7 @@ class ArticleServiceImplTest {
     private ArticleRepository articleRepository;
 
     @Mock
-    private AiJobRepository aiJobRepository;
+    private AiService aiService;
 
     @Mock
     private XssSanitizer xssSanitizer;
@@ -65,9 +64,6 @@ class ArticleServiceImplTest {
             article.setId(42L);
             return article;
         });
-        when(aiJobRepository.findTopByArticleIdAndTypeOrderByCreatedAtDesc(42L, AiJob.TYPE_FULL_ANALYSIS))
-            .thenReturn(Optional.empty());
-
         SyncArticleResponseDto response = articleService.syncArticle(request, user);
 
         ArgumentCaptor<Article> captor = ArgumentCaptor.forClass(Article.class);
@@ -108,8 +104,6 @@ class ArticleServiceImplTest {
         when(xssSanitizer.sanitize("New description")).thenReturn("New description");
         when(articleRepository.findByExternalIdAndUserId("article-1", 1L)).thenReturn(Optional.of(existing));
         when(articleRepository.save(existing)).thenReturn(existing);
-        when(aiJobRepository.findTopByArticleIdAndTypeOrderByCreatedAtDesc(42L, AiJob.TYPE_FULL_ANALYSIS))
-            .thenReturn(Optional.of(AiJob.createFullAnalysisJob(existing)));
 
         SyncArticleResponseDto response = articleService.syncArticle(request, user);
 

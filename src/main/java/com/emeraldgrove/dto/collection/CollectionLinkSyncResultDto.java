@@ -1,4 +1,4 @@
-package com.emeraldgrove.dto;
+package com.emeraldgrove.dto.collection;
 
 public record CollectionLinkSyncResultDto(
     String externalId,

@@ -1,17 +1,16 @@
 package com.emeraldgrove.controller;
 
-import com.emeraldgrove.dto.ArticleDeletionSyncRequestDto;
-import com.emeraldgrove.dto.ArticleSyncDto;
-import com.emeraldgrove.dto.SyncArticlePayloadResponseDto;
-import com.emeraldgrove.dto.SyncArticleRequestDto;
-import com.emeraldgrove.dto.SyncArticleResponseDto;
-import com.emeraldgrove.dto.SyncBatchItemResultDto;
-import com.emeraldgrove.dto.SyncBatchResponseDto;
+import com.emeraldgrove.dto.article.ArticleDeletionSyncRequestDto;
+import com.emeraldgrove.dto.article.ArticleSyncDto;
+import com.emeraldgrove.dto.sync.SyncArticlePayloadResponseDto;
+import com.emeraldgrove.dto.sync.SyncArticleRequestDto;
+import com.emeraldgrove.dto.sync.SyncArticleResponseDto;
+import com.emeraldgrove.dto.sync.SyncBatchItemResultDto;
+import com.emeraldgrove.dto.sync.SyncBatchResponseDto;
 import com.emeraldgrove.entity.User;
 import com.emeraldgrove.enums.SyncStatus;
 import com.emeraldgrove.exception.GlobalExceptionHandler;
 import com.emeraldgrove.service.ArticleService;
-import com.emeraldgrove.service.CollectionService;
 import com.emeraldgrove.util.ControllerUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,9 +40,6 @@ class ArticleControllerTest {
     private ArticleService articleService;
 
     @Mock
-    private CollectionService collectionService;
-
-    @Mock
     private ControllerUtil controllerUtil;
 
     private MockMvc mockMvc;
@@ -52,7 +48,7 @@ class ArticleControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders
-            .standaloneSetup(new ArticleController(articleService, collectionService, controllerUtil))
+            .standaloneSetup(new ArticleController(articleService, controllerUtil))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
         objectMapper = new ObjectMapper();

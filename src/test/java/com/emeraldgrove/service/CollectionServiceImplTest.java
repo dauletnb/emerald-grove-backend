@@ -1,9 +1,9 @@
 package com.emeraldgrove.service;
 
-import com.emeraldgrove.dto.CollectionLinkDeletionDto;
-import com.emeraldgrove.dto.CollectionLinkSyncDto;
-import com.emeraldgrove.dto.CollectionRequestDto;
-import com.emeraldgrove.dto.CollectionSyncDto;
+import com.emeraldgrove.dto.collection.CollectionLinkDeletionDto;
+import com.emeraldgrove.dto.collection.CollectionLinkSyncDto;
+import com.emeraldgrove.dto.collection.CollectionRequestDto;
+import com.emeraldgrove.dto.collection.CollectionSyncDto;
 import com.emeraldgrove.entity.Article;
 import com.emeraldgrove.entity.ArticleCollection;
 import com.emeraldgrove.entity.ArticleCollectionLink;

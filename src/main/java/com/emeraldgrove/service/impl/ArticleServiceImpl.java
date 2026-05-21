@@ -13,31 +13,27 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.emeraldgrove.constants.AiStatusConstants;
 import com.emeraldgrove.constants.ErrorMessages;
 import com.emeraldgrove.constants.SyncConstants;
-import com.emeraldgrove.dto.ArticleAiResponseDto;
-import com.emeraldgrove.dto.ArticleDeletionSyncRequestDto;
-import com.emeraldgrove.dto.ArticleNoteDto;
-import com.emeraldgrove.dto.ArticleSyncDto;
-import com.emeraldgrove.dto.SyncArticleNoteRequestDto;
-import com.emeraldgrove.dto.SyncArticlePayloadResponseDto;
-import com.emeraldgrove.dto.SyncArticleRequestDto;
-import com.emeraldgrove.dto.SyncArticleResponseDto;
-import com.emeraldgrove.dto.SyncBatchItemResultDto;
-import com.emeraldgrove.dto.SyncBatchResponseDto;
-import com.emeraldgrove.entity.AiJob;
-import com.emeraldgrove.entity.AiResult;
+import com.emeraldgrove.dto.article.ArticleDeletionSyncRequestDto;
+import com.emeraldgrove.dto.article.ArticleNoteDto;
+import com.emeraldgrove.dto.article.ArticleSyncDto;
+import com.emeraldgrove.dto.sync.SyncArticleNoteRequestDto;
+import com.emeraldgrove.dto.sync.SyncArticlePayloadResponseDto;
+import com.emeraldgrove.dto.sync.SyncArticleRequestDto;
+import com.emeraldgrove.dto.sync.SyncArticleResponseDto;
+import com.emeraldgrove.dto.sync.SyncBatchItemResultDto;
+import com.emeraldgrove.dto.sync.SyncBatchResponseDto;
 import com.emeraldgrove.entity.Article;
 import com.emeraldgrove.entity.ArticleNote;
 import com.emeraldgrove.entity.User;
 import com.emeraldgrove.enums.SyncStatus;
-import com.emeraldgrove.repository.AiJobRepository;
-import com.emeraldgrove.repository.AiResultRepository;
 import com.emeraldgrove.repository.ArticleNoteRepository;
 import com.emeraldgrove.repository.ArticleRepository;
 import com.emeraldgrove.security.XssSanitizer;
+import com.emeraldgrove.service.AiService;
 import com.emeraldgrove.service.ArticleService;
+import com.emeraldgrove.service.CollectionService;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -50,9 +46,9 @@ public class ArticleServiceImpl implements ArticleService {
 
     private final ArticleRepository articleRepository;
     private final ArticleNoteRepository articleNoteRepository;
-    private final AiJobRepository aiJobRepository;
-    private final AiResultRepository aiResultRepository;
     private final XssSanitizer xssSanitizer;
+    private final CollectionService collectionService;
+    private final AiService aiService;
 
     @Override
     @Transactional
@@ -64,7 +60,7 @@ public class ArticleServiceImpl implements ArticleService {
             syncNotes(existing, request.notes());
 
             Article saved = articleRepository.save(existing);
-            createFullAnalysisJobIfAbsent(saved);
+            aiService.queueAnalysisIfAbsent(saved);
             return new SyncArticleResponseDto(SyncStatus.UPDATED, saved.getId(), SyncArticlePayloadResponseDto.fromEntity(saved));
         }
 
@@ -83,7 +79,7 @@ public class ArticleServiceImpl implements ArticleService {
             syncNotes(article, request.notes());
 
             Article saved = articleRepository.save(article);
-            createFullAnalysisJobIfAbsent(saved);
+            aiService.queueAnalysisIfAbsent(saved);
             return new SyncArticleResponseDto(SyncStatus.CREATED, saved.getId(), SyncArticlePayloadResponseDto.fromEntity(saved));
         } catch (DataIntegrityViolationException e) {
             Article raceExisting = findExistingArticle(request, user.getId());
@@ -96,7 +92,7 @@ public class ArticleServiceImpl implements ArticleService {
             syncNotes(raceExisting, request.notes());
 
             Article saved = articleRepository.save(raceExisting);
-            createFullAnalysisJobIfAbsent(saved);
+            aiService.queueAnalysisIfAbsent(saved);
             return new SyncArticleResponseDto(SyncStatus.UPDATED, saved.getId(), SyncArticlePayloadResponseDto.fromEntity(saved));
         }
     }
@@ -117,6 +113,12 @@ public class ArticleServiceImpl implements ArticleService {
             .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_ARTICLE_NOT_FOUND.formatted(externalId)));
         articleRepository.delete(article);
         log.info("Deleted article. externalId={}, userId={}", externalId, userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> getArticleCollectionIds(String articleExternalId, Long userId) {
+        return collectionService.getArticleCollectionIds(articleExternalId, userId);
     }
 
     @Override
@@ -153,30 +155,6 @@ public class ArticleServiceImpl implements ArticleService {
 
         articleNoteRepository.deleteByExternalIdAndArticleExternalId(noteExternalId, articleExternalId);
         log.info("Deleted note. noteExternalId={}, articleExternalId={}", noteExternalId, articleExternalId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public ArticleAiResponseDto getAiResult(String externalId, Long userId) {
-        Article article = articleRepository.findByExternalIdAndUserId(externalId, userId)
-            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_ARTICLE_NOT_FOUND.formatted(externalId)));
-
-        String aiStatus = article.getAiStatus();
-        AiResult aiResult = aiResultRepository
-            .findTopByArticleIdAndTypeOrderByCreatedAtDesc(article.getId(), AiJob.TYPE_FULL_ANALYSIS)
-            .orElse(null);
-
-        String content = aiResult != null ? aiResult.getContent() : null;
-        return new ArticleAiResponseDto(aiStatus, content);
-    }
-
-    @Override
-    @Transactional
-    public void retryAiAnalysis(String externalId, Long userId) {
-        Article article = articleRepository.findByExternalIdAndUserId(externalId, userId)
-            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_ARTICLE_NOT_FOUND.formatted(externalId)));
-
-        ensureFullAnalysisQueued(article);
     }
 
     private Article findExistingArticle(SyncArticleRequestDto request, Long userId) {
@@ -234,31 +212,6 @@ public class ArticleServiceImpl implements ArticleService {
 
         article.getNotes().clear();
         article.getNotes().addAll(nextNotes);
-    }
-
-    private void createFullAnalysisJobIfAbsent(Article article) {
-        ensureFullAnalysisQueued(article);
-    }
-
-    private void ensureFullAnalysisQueued(Article article) {
-        AiJob latestJob = aiJobRepository
-            .findTopByArticleIdAndTypeOrderByCreatedAtDesc(article.getId(), AiJob.TYPE_FULL_ANALYSIS)
-            .orElse(null);
-
-        if (latestJob == null) {
-            article.setAiStatus(AiStatusConstants.AI_STATUS_PENDING);
-            aiJobRepository.save(AiJob.createFullAnalysisJob(article));
-            return;
-        }
-
-        if (AiStatusConstants.AI_STATUS_DONE.equals(latestJob.getStatus()) || AiStatusConstants.AI_STATUS_PENDING.equals(latestJob.getStatus()) || AiStatusConstants.AI_STATUS_PROCESSING.equals(latestJob.getStatus())) {
-            return;
-        }
-
-        latestJob.setStatus(AiStatusConstants.AI_STATUS_PENDING);
-        latestJob.setRetries(0);
-        article.setAiStatus(AiStatusConstants.AI_STATUS_PENDING);
-        aiJobRepository.save(latestJob);
     }
 
     private String sanitizeText(String value) {

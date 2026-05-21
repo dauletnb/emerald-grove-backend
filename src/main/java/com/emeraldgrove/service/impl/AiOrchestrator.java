@@ -5,8 +5,8 @@ import org.springframework.stereotype.Service;
 
 import com.emeraldgrove.constants.AiConstants;
 import com.emeraldgrove.constants.ErrorMessages;
-import com.emeraldgrove.dto.AiResponseDto;
-import com.emeraldgrove.dto.AiResultDto;
+import com.emeraldgrove.dto.ai.AiResponseDto;
+import com.emeraldgrove.dto.ai.AiResultDto;
 import com.emeraldgrove.entity.AiJob;
 import com.emeraldgrove.entity.AiResult;
 import com.emeraldgrove.entity.Article;

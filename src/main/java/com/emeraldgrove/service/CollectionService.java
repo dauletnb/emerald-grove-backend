@@ -1,12 +1,12 @@
 package com.emeraldgrove.service;
 
-import com.emeraldgrove.dto.CollectionDto;
-import com.emeraldgrove.dto.CollectionLinkBatchSyncResponseDto;
-import com.emeraldgrove.dto.CollectionLinkDeletionDto;
-import com.emeraldgrove.dto.CollectionLinkSyncDto;
-import com.emeraldgrove.dto.CollectionRequestDto;
-import com.emeraldgrove.dto.CollectionSyncDto;
-import com.emeraldgrove.dto.SyncBatchResponseDto;
+import com.emeraldgrove.dto.collection.CollectionDto;
+import com.emeraldgrove.dto.collection.CollectionLinkBatchSyncResponseDto;
+import com.emeraldgrove.dto.collection.CollectionLinkDeletionDto;
+import com.emeraldgrove.dto.collection.CollectionLinkSyncDto;
+import com.emeraldgrove.dto.collection.CollectionRequestDto;
+import com.emeraldgrove.dto.collection.CollectionSyncDto;
+import com.emeraldgrove.dto.sync.SyncBatchResponseDto;
 
 import java.util.List;
 

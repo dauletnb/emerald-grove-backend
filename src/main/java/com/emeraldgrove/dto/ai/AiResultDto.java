@@ -1,4 +1,4 @@
-package com.emeraldgrove.dto;
+package com.emeraldgrove.dto.ai;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -7,9 +7,7 @@ import java.util.List;
 public class AiResultDto {
     public Summary summary;
     public List<String> keyPoints;
-    public List<String> tags;
     public List<Highlight> highlights;
-    public Metadata metadata;
 
     public static class Summary {
         @JsonProperty("short")
@@ -20,10 +18,5 @@ public class AiResultDto {
     public static class Highlight {
         public String text;
         public String explanation;
-    }
-
-    public static class Metadata {
-        public int readingTime;
-        public String complexity;
     }
 }

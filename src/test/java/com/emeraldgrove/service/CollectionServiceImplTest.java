@@ -238,6 +238,29 @@ class CollectionServiceImplTest {
     }
 
     @Test
+    void renameCollectionUpdatesNameAndReturnsDto() {
+        ArticleCollection existing = ArticleCollection.builder()
+            .id(7L)
+            .externalId("collection-1")
+            .user(User.builder().id(1L).build())
+            .name("Old Name")
+            .build();
+
+        when(collectionRepository.findByExternalIdAndUserId("collection-1", 1L)).thenReturn(Optional.of(existing));
+        when(collectionRepository.save(existing)).thenReturn(existing);
+        when(linkRepository.findArticleExternalIdsByCollectionExternalId("collection-1"))
+            .thenReturn(List.of("article-1"));
+
+        var result = collectionService.renameCollection("collection-1", new CollectionRequestDto("  New Name  "), 1L);
+
+        assertThat(existing.getName()).isEqualTo("New Name");
+        assertThat(result.name()).isEqualTo("New Name");
+        assertThat(result.externalId()).isEqualTo("collection-1");
+        assertThat(result.articleCount()).isEqualTo(1);
+        assertThat(result.articleIds()).containsExactly("article-1");
+    }
+
+    @Test
     void getArticleCollectionIdsChecksArticleOwnershipBeforeQuery() {
         Article article = Article.builder()
             .id(5L)

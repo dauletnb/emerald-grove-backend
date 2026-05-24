@@ -170,6 +170,17 @@ class ArticleControllerTest {
     }
 
     @Test
+    void getArticleCollectionIdsReturnsList() throws Exception {
+        when(articleService.getArticleCollectionIds("article-1", 1L))
+            .thenReturn(List.of("collection-1", "collection-2"));
+
+        mockMvc.perform(get("/api/articles/article-1/collections"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0]").value("collection-1"))
+            .andExpect(jsonPath("$[1]").value("collection-2"));
+    }
+
+    @Test
     void syncDeletedArticlesReturnsDiagnostics() throws Exception {
         ArticleDeletionSyncRequestDto request = new ArticleDeletionSyncRequestDto(List.of("article-1", "article-2"));
 

@@ -46,21 +46,21 @@ class AiControllerTest {
     @Test
     void getAiResultReturnsAiStatusAndContent() throws Exception {
         when(aiService.getAiResult(eq("article-1"), eq(1L)))
-            .thenReturn(new AiAnalysisResultResponseDton("COMPLETED", null));
+            .thenReturn(new AiAnalysisResultResponseDton("DONE", null));
 
         mockMvc.perform(get("/api/ai/articles/article-1"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.aiStatus").value("COMPLETED"));
+            .andExpect(jsonPath("$.aiStatus").value("DONE"));
     }
 
     @Test
     void getAiResultWithLegacyPathReturnsAiStatusAndContent() throws Exception {
         when(aiService.getAiResult(eq("article-1"), eq(1L)))
-            .thenReturn(new AiAnalysisResultResponseDton("COMPLETED", null));
+            .thenReturn(new AiAnalysisResultResponseDton("DONE", null));
 
         mockMvc.perform(get("/api/ai/articles/article-1/ai"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.aiStatus").value("COMPLETED"));
+            .andExpect(jsonPath("$.aiStatus").value("DONE"));
     }
 
     @Test

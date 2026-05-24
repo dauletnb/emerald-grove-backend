@@ -157,6 +157,24 @@ public class ArticleServiceImpl implements ArticleService {
         log.info("Deleted note. noteExternalId={}, articleExternalId={}", noteExternalId, articleExternalId);
     }
 
+    @Override
+    @Transactional
+    public void updateNote(String articleExternalId, String noteExternalId, String content, com.emeraldgrove.enums.NoteType type, Long userId) {
+        log.info("Updating note. noteExternalId={}, articleExternalId={}, userId={}", noteExternalId, articleExternalId, userId);
+        Article article = articleRepository.findByExternalIdAndUserId(articleExternalId, userId)
+            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_ARTICLE_NOT_FOUND.formatted(articleExternalId)));
+
+        ArticleNote note = article.getNotes().stream()
+            .filter(n -> n.getExternalId().equals(noteExternalId))
+            .findFirst()
+            .orElseThrow(() -> new EntityNotFoundException(ErrorMessages.ERROR_NOTE_NOT_FOUND.formatted(noteExternalId)));
+
+        note.setContent(sanitizeText(content));
+        note.setType(type);
+        articleNoteRepository.save(note);
+        log.info("Updated note. noteExternalId={}, articleExternalId={}", noteExternalId, articleExternalId);
+    }
+
     private Article findExistingArticle(SyncArticleRequestDto request, Long userId) {
         if (request.externalId() != null && !request.externalId().isBlank()) {
             Article byExternalId = articleRepository.findByExternalIdAndUserId(request.externalId(), userId).orElse(null);

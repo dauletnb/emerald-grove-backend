@@ -18,6 +18,8 @@ public interface ArticleService {
 
     void deleteNote(String articleExternalId, String noteExternalId, Long userId);
 
+    void updateNote(String articleExternalId, String noteExternalId, String content, com.emeraldgrove.enums.NoteType type, Long userId);
+
     void deleteArticle(String externalId, Long userId);
 
     List<String> getArticleCollectionIds(String articleExternalId, Long userId);

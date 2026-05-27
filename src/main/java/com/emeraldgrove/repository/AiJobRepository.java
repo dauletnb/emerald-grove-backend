@@ -12,5 +12,7 @@ import java.util.UUID;
 public interface AiJobRepository extends JpaRepository<AiJob, UUID> {
     List<AiJob> findTop10ByStatus(String status);
 
+    List<AiJob> findAllByStatus(String status);
+
     Optional<AiJob> findTopByArticleIdAndTypeOrderByCreatedAtDesc(Long articleId, String type);
 }

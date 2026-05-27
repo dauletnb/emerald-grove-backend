@@ -6,6 +6,8 @@ import com.emeraldgrove.entity.AiJob;
 import com.emeraldgrove.repository.AiJobRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,19 @@ import java.util.List;
 public class AiWorker {
     private final AiJobRepository aiJobRepository;
     private final AiOrchestrator orchestrator;
+
+    @EventListener(ApplicationReadyEvent.class)
+    @Transactional
+    public void recoverStuckJobs() {
+        List<AiJob> stuck = aiJobRepository.findAllByStatus(AiStatusConstants.AI_STATUS_PROCESSING);
+        if (stuck.isEmpty()) return;
+        log.warn("Recovering {} stuck PROCESSING jobs on startup", stuck.size());
+        for (AiJob job : stuck) {
+            job.setStatus(AiStatusConstants.AI_STATUS_PENDING);
+            job.getArticle().setAiStatus(AiStatusConstants.AI_STATUS_PENDING);
+        }
+        aiJobRepository.saveAll(stuck);
+    }
 
     @Scheduled(fixedDelay = AiConstants.SCHEDULED_DELAY_MS, initialDelay = AiConstants.SCHEDULED_INITIAL_DELAY_MS)
     @Transactional(noRollbackFor = Exception.class)
